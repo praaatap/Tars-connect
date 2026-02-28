@@ -13,7 +13,7 @@ export function ChatCanvas({
 }: ChatCanvasProps) {
   return (
     <section className="relative flex flex-1 flex-col items-center justify-center bg-zinc-50">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(99,102,241,0.1)_1px,transparent_0)] bg-[size:24px_24px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(99,102,241,0.1)_1px,transparent_0)] bg-size-[24px_24px]" />
 
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         <div className="mb-8 flex items-end gap-3">

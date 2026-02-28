@@ -1,122 +1,104 @@
 "use client";
 
-import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import Link from "next/link";
+import { SignInButton, UserButton } from "@clerk/nextjs";
+import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-black">
-      <main className="flex w-full max-w-2xl flex-col items-center gap-8 px-8 py-16">
-        {/* Header */}
-        <div className="flex w-full items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-            Tars Connect
-          </h1>
-          <Authenticated>
-            <UserButton afterSignOutUrl="/" />
-          </Authenticated>
+    <main className="grid min-h-screen grid-cols-1 bg-zinc-100 lg:grid-cols-2">
+      <section className="relative hidden overflow-hidden bg-indigo-600 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.18)_1px,transparent_1px)] bg-size-[72px_72px]" />
+        <div className="relative z-10 flex items-center gap-2 text-lg font-semibold">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+            💬
+          </span>
+          Tars Social
         </div>
-
-        {/* Main Content */}
-        <div className="flex w-full flex-col items-center gap-6 rounded-2xl bg-white p-12 shadow-xl dark:bg-zinc-800">
-          <AuthLoading>
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900 dark:border-zinc-700 dark:border-t-zinc-50"></div>
-              <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+        <div className="relative z-10 max-w-xl space-y-6">
+          <h1 className="text-6xl font-bold leading-[1.05] tracking-tight">
+            Connect instantly. Collaborate effortlessly.
+          </h1>
+          <p className="max-w-lg text-2xl text-white/90">
+            A polished, real-time messaging interface built for modern teams.
+          </p>
+          <div className="inline-flex items-center gap-4 rounded-full bg-white/10 px-5 py-3">
+            <div className="flex -space-x-2">
+              <span className="h-8 w-8 rounded-full border-2 border-indigo-500 bg-indigo-200" />
+              <span className="h-8 w-8 rounded-full border-2 border-indigo-500 bg-indigo-100" />
+              <span className="h-8 w-8 rounded-full border-2 border-indigo-500 bg-indigo-50" />
             </div>
+            <div>
+              <p className="text-xs text-yellow-300">★★★★★</p>
+              <p className="text-sm text-white/90">Active developers</p>
+            </div>
+          </div>
+        </div>
+        <div className="relative z-10 flex gap-6 text-sm text-white/80">
+          <span>© 2026 Tars Inc.</span>
+          <span>Privacy Policy</span>
+          <span>Terms of Service</span>
+        </div>
+      </section>
+
+      <section className="flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
+          <AuthLoading>
+            <p className="text-center text-sm text-zinc-500">Loading auth...</p>
           </AuthLoading>
 
           <Unauthenticated>
-            <div className="flex flex-col items-center gap-6 text-center">
-              <div className="rounded-full bg-zinc-100 p-6 dark:bg-zinc-700">
-                <svg
-                  className="h-16 w-16 text-zinc-700 dark:text-zinc-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-3xl font-bold text-zinc-900">Welcome back</h2>
+                <p className="mt-2 text-zinc-500">Please sign in to continue.</p>
               </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                  Welcome to Tars Connect
-                </h2>
-                <p className="text-lg text-zinc-600 dark:text-zinc-400">
-                  Sign in to access your account and connect with team members
-                </p>
+
+              <div className="space-y-3">
+                <SignInButton mode="modal">
+                  <button className="w-full rounded-full border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+                    Continue with Google
+                  </button>
+                </SignInButton>
+                <SignInButton mode="modal">
+                  <button className="w-full rounded-full border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+                    Continue with GitHub
+                  </button>
+                </SignInButton>
               </div>
+
               <SignInButton mode="modal">
-                <button className="mt-4 rounded-lg bg-zinc-900 px-8 py-3 text-lg font-semibold text-white transition-all hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200">
-                  Sign In
+                <button className="w-full rounded-full bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500">
+                  Sign in
                 </button>
               </SignInButton>
             </div>
           </Unauthenticated>
 
           <Authenticated>
-            <AuthenticatedContent />
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-zinc-900">You are signed in</h2>
+                <UserButton afterSignOutUrl="/" />
+              </div>
+              <div className="grid gap-3">
+                <Link
+                  href="/chat"
+                  className="rounded-xl border border-zinc-200 px-4 py-3 text-center font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Open Chat Page
+                </Link>
+                <Link
+                  href="/group-chat"
+                  className="rounded-xl border border-zinc-200 px-4 py-3 text-center font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Open Group Chat Page
+                </Link>
+              </div>
+            </div>
           </Authenticated>
         </div>
-      </main>
-    </div>
-  );
-}
-
-function AuthenticatedContent() {
-  const { user } = useUser();
-
-  return (
-    <div className="flex w-full flex-col items-center gap-6 text-center">
-      <div className="rounded-full bg-green-100 p-6 dark:bg-green-900">
-        <svg
-          className="h-16 w-16 text-green-700 dark:text-green-300"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-      </div>
-      <div className="space-y-2">
-        <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-          Welcome back, {user?.firstName || "User"}! 👋
-        </h2>
-        <p className="text-lg text-zinc-600 dark:text-zinc-400">
-          You're successfully authenticated with Clerk & Convex
-        </p>
-      </div>
-      <div className="mt-4 w-full space-y-3 rounded-lg bg-zinc-50 p-6 text-left dark:bg-zinc-700">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Email:
-          </span>
-          <span className="text-sm text-zinc-900 dark:text-zinc-100">
-            {user?.primaryEmailAddress?.emailAddress}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            User ID:
-          </span>
-          <span className="text-sm font-mono text-zinc-900 dark:text-zinc-100">
-            {user?.id.slice(0, 20)}...
-          </span>
-        </div>
-      </div>
-      <p className="text-sm text-zinc-500 dark:text-zinc-500">
-        🎉 Your Convex backend can now access your authenticated user data
-      </p>
-    </div>
+      </section>
+    </main>
   );
 }
