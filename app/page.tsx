@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -24,9 +25,9 @@ export default function Home() {
           </p>
           <div className="inline-flex items-center gap-4 rounded-full bg-white/10 px-5 py-3">
             <div className="flex -space-x-2">
-              <span className="h-8 w-8 rounded-full border-2 border-indigo-500 bg-indigo-200" />
-              <span className="h-8 w-8 rounded-full border-2 border-indigo-500 bg-indigo-100" />
-              <span className="h-8 w-8 rounded-full border-2 border-indigo-500 bg-indigo-50" />
+              <Image src="https://randomuser.me/api/portraits/men/32.jpg" alt="User 1" className="h-8 w-8 rounded-full border-2 border-indigo-500 object-cover" width={32} height={32} />
+              <Image src="https://randomuser.me/api/portraits/men/45.jpg" alt="User 2" className="h-8 w-8 rounded-full border-2 border-indigo-500 object-cover" width={32} height={32} />
+              <Image src="https://randomuser.me/api/portraits/women/68.jpg" alt="User 3" className="h-8 w-8 rounded-full border-2 border-indigo-500 object-cover" width={32} height={32} />
             </div>
             <div>
               <p className="text-xs text-yellow-300">★★★★★</p>
