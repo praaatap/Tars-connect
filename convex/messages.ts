@@ -98,6 +98,7 @@ export const getConversations = query({
           lastMessageAt: conv.lastMessageAt,
           otherUserId: conv.otherUserId,
           lastSeenAt: otherUser?.lastSeenAt,
+          isTyping: !!(conv.typing?.[conv.otherUserId] && (Date.now() - conv.typing[conv.otherUserId]) < 3000),
         };
       })
     );
@@ -167,9 +168,50 @@ export const sendMessage = mutation({
       lastMessage: normalized,
       lastMessageAt: now,
       lastMessageSenderId: currentUser._id,
+      // Clear typing for this user when they send a message
+      typing: {
+        ...((await ctx.db.get(args.conversationId))?.typing || {}),
+        [currentUser._id]: 0,
+      }
     });
 
     return messageId;
+  },
+});
+
+export const setTyping = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) return;
+
+    await ctx.db.patch(args.conversationId, {
+      typing: {
+        ...(conversation.typing || {}),
+        [currentUser._id]: Date.now(),
+      },
+    });
+  },
+});
+
+export const clearTyping = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) return;
+
+    const newTyping = { ...(conversation.typing || {}) };
+    delete newTyping[currentUser._id];
+
+    await ctx.db.patch(args.conversationId, {
+      typing: newTyping,
+    });
   },
 });
 

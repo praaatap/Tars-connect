@@ -211,17 +211,27 @@ function ChatWindow({
   selectedConversation?: any;
 }) {
   const [input, setInput] = useState("");
+  const setTyping = useMutation((api as any).messages.setTyping);
+  const clearTyping = useMutation((api as any).messages.clearTyping);
+
+  const handleTyping = () => {
+    if (!selectedConversation?._id) return;
+    setTyping({ conversationId: selectedConversation._id });
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
     await onSendMessage(input);
     setInput("");
+    if (selectedConversation?._id) {
+      clearTyping({ conversationId: selectedConversation._id });
+    }
   };
 
   return (
     <>
       {/* Mobile-only header with back button */}
-      <div className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 lg:hidden">
+      <div className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 lg:hidden shrink-0">
         <button
           onClick={onBack}
           className="p-1 -ml-1 text-zinc-600 hover:text-zinc-900"
@@ -237,35 +247,53 @@ function ChatWindow({
           <span className="font-medium text-zinc-900">{selectedConversation?.name}</span>
         </div>
       </div>
-      {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
-          <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">
-            👋
-          </div>
-          <div className="max-w-xs">
-            <p className="text-zinc-900 font-medium">No messages yet</p>
-            <p className="text-zinc-500 text-sm mt-1">Start the conversation by sending a message below!</p>
-          </div>
-        </div>
-      ) : (
-        messages.map((msg: any) => (
-          <div key={msg._id} className="flex gap-3">
-            <div className="h-8 w-8 rounded-full bg-indigo-200 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-zinc-900">{msg.sender.name}</p>
-              <p className="text-sm text-zinc-700 mt-1">{msg.body}</p>
-              <p className="text-xs text-zinc-400 mt-1">{formatMessageTimestamp(msg.createdAt)}</p>
+
+      <div className="flex-1 overflow-y-auto bg-white p-6 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
+            <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">
+              👋
+            </div>
+            <div className="max-w-xs">
+              <p className="text-zinc-900 font-medium">No messages yet</p>
+              <p className="text-zinc-500 text-sm mt-1">Start the conversation by sending a message below!</p>
             </div>
           </div>
-        ))
-      )}
-      <div className="border-t border-zinc-200 bg-white px-5 py-4">
+        ) : (
+          <>
+            {messages.map((msg: any) => (
+              <div key={msg._id} className="flex gap-3">
+                <div className="h-8 w-8 rounded-full bg-indigo-200 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-zinc-900">{msg.sender.name}</p>
+                  <p className="text-sm text-zinc-700 mt-1">{msg.body}</p>
+                  <p className="text-xs text-zinc-400 mt-1">{formatMessageTimestamp(msg.createdAt)}</p>
+                </div>
+              </div>
+            ))}
+            {selectedConversation?.isTyping && (
+              <div className="flex gap-2 items-center text-zinc-400 text-xs animate-pulse">
+                <div className="flex gap-1">
+                  <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full"></span>
+                  <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full"></span>
+                  <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full"></span>
+                </div>
+                <span>{selectedConversation.name} is typing...</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      <div className="border-t border-zinc-200 bg-white px-5 py-4 shrink-0">
         <div className="flex items-center gap-3 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2.5">
           <input
             className="flex-1 bg-transparent text-sm text-zinc-700 outline-none"
             placeholder="Type a message..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              handleTyping();
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

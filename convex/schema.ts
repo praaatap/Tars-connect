@@ -27,6 +27,7 @@ export default defineSchema({
     lastMessageAt: v.number(),
     lastMessage: v.optional(v.string()),
     lastMessageSenderId: v.optional(v.id("users")),
+    typing: v.optional(v.record(v.string(), v.number())),
   }).index("by_participants", ["participants"]),
 
   messages: defineTable({
