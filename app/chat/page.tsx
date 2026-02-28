@@ -304,8 +304,8 @@ function ChatContent() {
                       <label
                         key={u._id}
                         className={`flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer ${selectedParticipants.includes(u._id)
-                            ? 'border-indigo-600 bg-indigo-50 shadow-sm'
-                            : 'border-zinc-100 hover:border-zinc-200 bg-white'
+                          ? 'border-indigo-600 bg-indigo-50 shadow-sm'
+                          : 'border-zinc-100 hover:border-zinc-200 bg-white'
                           }`}
                       >
                         <input
@@ -552,13 +552,13 @@ function ChatWindow({
                     </div>
 
                     {/* Reactions Display */}
-                    {Object.keys(msg.reactionCounts || {}).length > 0 && (
+                    {msg.reactions && msg.reactions.length > 0 && (
                       <div className={`flex gap-1 mt-[-6px] z-10 ${isMine ? 'mr-2' : 'ml-2'}`}>
-                        {Object.entries(msg.reactionCounts as Record<string, number>).map(([emoji, count]) => (
+                        {msg.reactions.map(({ emoji, count }: { emoji: string, count: number }) => (
                           <button
                             key={emoji}
                             onClick={() => toggleReaction({ messageId: msg._id, emoji })}
-                            className={`flex items-center gap-1 bg-white rounded-full px-1.5 py-0.5 border border-zinc-100 shadow-sm text-[11px] hover:bg-zinc-50 transition-colors ${msg.reactions?.[currentUserId || ''] === emoji ? 'border-indigo-200 bg-indigo-50' : ''}`}
+                            className={`flex items-center gap-1 bg-white rounded-full px-1.5 py-0.5 border border-zinc-100 shadow-sm text-[11px] hover:bg-zinc-50 transition-colors ${msg.userReaction === emoji ? 'border-indigo-200 bg-indigo-50' : ''}`}
                           >
                             <span>{emoji}</span>
                             <span className="font-medium text-zinc-600">{count}</span>

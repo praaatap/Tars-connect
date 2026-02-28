@@ -205,11 +205,15 @@ export const getMessagesForConversation = query({
       messages.map(async (msg) => {
         const sender = await ctx.db.get(msg.senderId);
 
-        // Calculate reaction counts
-        const reactionCounts: Record<string, number> = {};
+        // Format reactions as an array of { emoji, count } for Convex compatibility
+        const reactions: { emoji: string; count: number }[] = [];
         if (msg.reactions) {
+          const counts: Record<string, number> = {};
           Object.values(msg.reactions).forEach(emoji => {
-            reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+            counts[emoji] = (counts[emoji] || 0) + 1;
+          });
+          Object.entries(counts).forEach(([emoji, count]) => {
+            reactions.push({ emoji, count });
           });
         }
 
@@ -221,7 +225,7 @@ export const getMessagesForConversation = query({
             name: sender?.name || "User",
             imageUrl: sender?.imageUrl
           },
-          reactionCounts,
+          reactions,
           userReaction: currentUser ? msg.reactions?.[currentUser._id] : undefined,
         };
       })
