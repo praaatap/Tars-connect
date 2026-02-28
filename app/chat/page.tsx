@@ -11,6 +11,8 @@ import { ChatCanvas } from "../components/chat/ChatCanvas";
 import { ChatComposer } from "../components/chat/ChatComposer";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatRightSidebar } from "../components/chat/ChatRightSidebar";
+import { GroupInvitesPanel } from "../components/chat/GroupInvitesPanel";
+import { GroupMembersModal } from "../components/chat/GroupMembersModal";
 
 export default function ChatPage() {
   return (
@@ -131,6 +133,21 @@ function ChatContent() {
 
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
+
+  // Get pending group invites
+  const pendingInvites = useQuery((api as any).messages.getPendingInvites, {});
+  const acceptGroupInvite = useMutation((api as any).messages.acceptGroupInvite);
+  const rejectGroupInvite = useMutation((api as any).messages.rejectGroupInvite);
+  const sendGroupInvite = useMutation((api as any).messages.sendGroupInvite);
+  const getGroupMembers = useQuery(
+    selectedConversationId && (conversations?.find((c: any) => c._id === selectedConversationId)?.isGroup)
+      ? (api as any).messages.getGroupMembers
+      : "skip",
+    selectedConversationId && (conversations?.find((c: any) => c._id === selectedConversationId)?.isGroup)
+      ? { conversationId: selectedConversationId as any }
+      : "skip"
+  );
 
   const handleSendMessage = async (messageBody: string) => {
     if (!selectedConversationId || !messageBody.trim() || isSending) return;
@@ -147,6 +164,38 @@ function ChatContent() {
       setError("Failed to send message. Please try again.");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    try {
+      const conversationId = await acceptGroupInvite({ inviteId: inviteId as any });
+      setSelectedConversationId(conversationId);
+    } catch (err) {
+      console.error("Failed to accept invite:", err);
+      setError("Failed to accept invite. Please try again.");
+    }
+  };
+
+  const handleRejectInvite = async (inviteId: string) => {
+    try {
+      await rejectGroupInvite({ inviteId: inviteId as any });
+    } catch (err) {
+      console.error("Failed to reject invite:", err);
+      setError("Failed to reject invite. Please try again.");
+    }
+  };
+
+  const handleSendGroupInvites = async (userIds: string[]) => {
+    if (!selectedConversationId) return;
+    try {
+      await sendGroupInvite({
+        conversationId: selectedConversationId as any,
+        invitedUserIds: userIds as any,
+      });
+    } catch (err) {
+      console.error("Failed to send invites:", err);
+      setError("Failed to send invites. Please try again.");
     }
   };
 
@@ -213,7 +262,12 @@ function ChatContent() {
 
       <div className="flex min-h-0 flex-1 relative overflow-hidden">
         {/* Sidebar - hidden on mobile when a chat is selected */}
-        <div className={`w-full lg:w-[320px] lg:flex shrink-0 ${selectedConversationId ? 'hidden' : 'flex'}`}>
+        <div className={`w-full lg:w-[320px] lg:flex shrink-0 flex-col ${selectedConversationId ? 'hidden' : 'flex'}`}>
+          <GroupInvitesPanel
+            invites={pendingInvites ?? []}
+            onAccept={handleAcceptInvite}
+            onReject={handleRejectInvite}
+          />
           <ChatSidebar
             userName={currentUser?.name || user?.firstName || "User"}
             userStatus="Online"
@@ -249,6 +303,9 @@ function ChatContent() {
               currentUserId={currentUser?._id}
               isSending={isSending}
               error={error}
+              isGroupChat={conversations?.find((c: any) => c._id === selectedConversationId)?.isGroup}
+              groupMembers={getGroupMembers ?? []}
+              onAddMembers={() => setIsAddMembersOpen(true)}
             />
           ) : (
             <div className="hidden lg:flex flex-1 flex-col items-center justify-center bg-[#efeae2]/30 space-y-4">
@@ -350,6 +407,18 @@ function ChatContent() {
           </div>
         </div>
       )}
+
+      {/* Add Members to Group Modal */}
+      {isAddMembersOpen && selectedConversationId && (
+        <GroupMembersModal
+          isOpen={isAddMembersOpen}
+          groupName={conversations?.find((c: any) => c._id === selectedConversationId)?.name || "Group"}
+          currentMembers={getGroupMembers ?? []}
+          allUsers={allUsers ?? []}
+          onClose={() => setIsAddMembersOpen(false)}
+          onInvite={handleSendGroupInvites}
+        />
+      )}
     </main>
   );
 }
@@ -362,6 +431,9 @@ function ChatWindow({
   currentUserId,
   isSending,
   error,
+  isGroupChat,
+  groupMembers,
+  onAddMembers,
 }: {
   messages: any[];
   onSendMessage: (message: string) => void;
@@ -370,6 +442,9 @@ function ChatWindow({
   currentUserId?: string;
   isSending?: boolean;
   error?: string | null;
+  isGroupChat?: boolean;
+  groupMembers?: any[];
+  onAddMembers?: () => void;
 }) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -456,9 +531,26 @@ function ChatWindow({
           </div>
           <div>
             <span className="font-semibold text-zinc-900 block leading-tight">{selectedConversation?.name}</span>
-            <span className="text-xs text-zinc-500">{selectedConversation?.isOnline ? 'Online' : 'Offline'}</span>
+            <span className="text-xs text-zinc-500">
+              {isGroupChat 
+                ? `${groupMembers?.length || 0} members`
+                : selectedConversation?.isOnline ? 'Online' : 'Offline'
+              }
+            </span>
           </div>
         </div>
+        
+        {isGroupChat && onAddMembers && (
+          <button
+            onClick={onAddMembers}
+            className="p-2 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            title="Add members"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div

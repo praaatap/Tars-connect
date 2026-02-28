@@ -43,4 +43,15 @@ export default defineSchema({
   })
     .index("by_conversation", ["conversationId"])
     .index("by_conversation_createdAt", ["conversationId", "createdAt"]),
+
+  groupChatInvites: defineTable({
+    conversationId: v.id("conversations"),
+    invitedUserId: v.id("users"),
+    invitedByUserId: v.id("users"),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("rejected")),
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+  })
+    .index("by_invited_user_status", ["invitedUserId", "status"])
+    .index("by_conversation_status", ["conversationId", "status"]),
 });

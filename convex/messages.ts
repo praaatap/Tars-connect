@@ -383,3 +383,173 @@ export const getSuggestedUsers = query({
     return users.filter((u: any) => u._id !== currentUser._id).slice(0, 10);
   },
 });
+
+// Send group chat invites
+export const sendGroupInvite = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    invitedUserIds: v.array(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const conversation = await ctx.db.get(args.conversationId);
+
+    if (!conversation || !conversation.participants.includes(currentUser._id)) {
+      throw new Error("Not a member of this group");
+    }
+
+    const now = Date.now();
+    const inviteIds = [];
+
+    for (const userId of args.invitedUserIds) {
+      // Check if already a member
+      if (conversation.participants.includes(userId)) {
+        continue;
+      }
+
+      // Check if invite already exists
+      const existingInvites = await ctx.db
+        .query("groupChatInvites")
+        .collect();
+      
+      const existingInvite = existingInvites.find((invite: any) =>
+        invite.conversationId === args.conversationId &&
+        invite.invitedUserId === userId &&
+        invite.status === "pending"
+      );
+
+      if (!existingInvite) {
+        const inviteId = await ctx.db.insert("groupChatInvites", {
+          conversationId: args.conversationId,
+          invitedUserId: userId,
+          invitedByUserId: currentUser._id,
+          status: "pending",
+          createdAt: now,
+        });
+        inviteIds.push(inviteId);
+      }
+    }
+
+    return inviteIds;
+  },
+});
+
+// Get pending invites for current user
+export const getPendingInvites = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) return [];
+
+    const invites = await ctx.db
+      .query("groupChatInvites")
+      .withIndex("by_invited_user_status", (q: any) =>
+        q.eq("invitedUserId", currentUser._id).eq("status", "pending")
+      )
+      .collect();
+
+    return Promise.all(
+      invites.map(async (invite: any) => {
+        const conversation = await ctx.db.get(invite.conversationId);
+        const invitedBy = await ctx.db.get(invite.invitedByUserId);
+
+        return {
+          _id: invite._id,
+          conversationId: invite.conversationId,
+          conversationName: conversation?.name || "Group Chat",
+          conversationImage: undefined,
+          invitedBy: invitedBy?.name || "User",
+          invitedByImage: invitedBy?.imageUrl,
+          status: invite.status,
+          createdAt: invite.createdAt,
+        };
+      })
+    );
+  },
+});
+
+// Accept group chat invite
+export const acceptGroupInvite = mutation({
+  args: {
+    inviteId: v.id("groupChatInvites"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const invite = await ctx.db.get(args.inviteId);
+
+    if (!invite || invite.invitedUserId !== currentUser._id) {
+      throw new Error("Invite not found or not for this user");
+    }
+
+    if (invite.status !== "pending") {
+      throw new Error("Invite already responded to");
+    }
+
+    const conversation = await ctx.db.get(invite.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    // Add user to conversation participants
+    const updatedParticipants = Array.from(
+      new Set([...conversation.participants, currentUser._id])
+    );
+
+    await ctx.db.patch(invite.conversationId, {
+      participants: updatedParticipants,
+    });
+
+    // Mark invite as accepted
+    await ctx.db.patch(args.inviteId, {
+      status: "accepted",
+      respondedAt: Date.now(),
+    });
+
+    return invite.conversationId;
+  },
+});
+
+// Reject group chat invite
+export const rejectGroupInvite = mutation({
+  args: {
+    inviteId: v.id("groupChatInvites"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const invite = await ctx.db.get(args.inviteId);
+
+    if (!invite || invite.invitedUserId !== currentUser._id) {
+      throw new Error("Invite not found or not for this user");
+    }
+
+    if (invite.status !== "pending") {
+      throw new Error("Invite already responded to");
+    }
+
+    await ctx.db.patch(args.inviteId, {
+      status: "rejected",
+      respondedAt: Date.now(),
+    });
+  },
+});
+
+// Get group members
+export const getGroupMembers = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) return [];
+
+    return Promise.all(
+      conversation.participants.map(async (userId: any) => {
+        const user = await ctx.db.get(userId);
+        return {
+          _id: user?._id,
+          name: user?.name || "User",
+          imageUrl: user?.imageUrl,
+          email: user?.email,
+        };
+      })
+    );
+  },
+});
