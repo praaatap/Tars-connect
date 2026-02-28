@@ -13,6 +13,7 @@ import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatRightSidebar } from "../components/chat/ChatRightSidebar";
 import { GroupInvitesPanel } from "../components/chat/GroupInvitesPanel";
 import { GroupMembersModal } from "../components/chat/GroupMembersModal";
+import { MainHeader } from "../components/MainHeader";
 
 export default function ChatPage() {
   return (
@@ -30,10 +31,7 @@ export default function ChatPage() {
 function ChatSkeleton() {
   return (
     <main className="flex h-screen flex-col bg-zinc-50">
-      <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3 shrink-0">
-        <div className="h-6 w-32 bg-zinc-100 rounded animate-pulse" />
-        <div className="h-8 w-8 bg-zinc-100 rounded-full animate-pulse" />
-      </div>
+      <MainHeader />
       <div className="flex flex-1 min-h-0">
         <div className="hidden lg:flex w-[320px] flex-col border-r border-zinc-200 bg-white p-4 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
@@ -252,15 +250,7 @@ function ChatContent() {
 
   return (
     <main className="flex h-screen flex-col bg-zinc-100 relative">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-zinc-900">Tars Chat</h1>
-          <Link href="/group-chat" className="text-sm text-indigo-600 hover:text-indigo-500">
-            Group Chat
-          </Link>
-        </div>
-        <UserButton afterSignOutUrl="/" />
-      </header>
+      <MainHeader />
 
       <div className="flex min-h-0 flex-1 relative overflow-hidden">
         {/* Sidebar - hidden on mobile when a chat is selected */}

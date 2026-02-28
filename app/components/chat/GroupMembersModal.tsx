@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 type User = {
-  _id: string;
-  name: string;
+  _id: any;
+  name?: string;
   imageUrl?: string;
   email?: string;
 };
@@ -68,7 +68,7 @@ export function GroupMembersModal({
                     {member.name?.[0] || 'U'}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-zinc-700">{member.name}</p>
+                    <p className="text-sm font-medium text-zinc-700">{member.name || "User"}</p>
                     <p className="text-xs text-zinc-500">{member.email}</p>
                   </div>
                   <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
@@ -113,7 +113,7 @@ export function GroupMembersModal({
                       {user.name?.[0] || 'U'}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-700">{user.name}</p>
+                      <p className="text-sm font-medium text-zinc-700">{user.name || "User"}</p>
                       <p className="text-xs text-zinc-500">{user.email}</p>
                     </div>
                     {selectedUsers.includes(user._id) && (

@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { ChatCanvas } from "../components/chat/ChatCanvas";
 import { ChatComposer } from "../components/chat/ChatComposer";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
+import { MainHeader } from "../components/MainHeader";
 
 const groups = [
   {
@@ -27,15 +28,7 @@ export default function GroupChatPage() {
 
   return (
     <main className="flex h-screen flex-col bg-zinc-100">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-zinc-900">Tars Group Chat</h1>
-          <Link href="/chat" className="text-sm text-indigo-600 hover:text-indigo-500">
-            Direct Chat
-          </Link>
-        </div>
-        <UserButton afterSignOutUrl="/" />
-      </header>
+      <MainHeader />
 
       <div className="flex min-h-0 flex-1">
         <ChatSidebar
@@ -46,10 +39,10 @@ export default function GroupChatPage() {
           chats={groups}
           searchValue={searchValue}
           onSearchChange={setSearchValue}
-          onSearchSubmit={() => {}}
+          onSearchSubmit={() => { }}
           searchHistory={[]}
           onHistorySelect={setSearchValue}
-          onChatSelect={() => {}}
+          onChatSelect={() => { }}
         />
         <div className="flex min-h-0 flex-1 flex-col">
           <ChatCanvas
