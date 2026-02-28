@@ -61,34 +61,57 @@ export const initializeUser = mutation({
   },
 });
 
+export const createGroup = mutation({
+  args: {
+    participantIds: v.array(v.id("users")),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const now = Date.now();
+
+    // Include current user in participants
+    const participants = Array.from(new Set([...args.participantIds, currentUser._id]));
+
+    const conversationId = await ctx.db.insert("conversations", {
+      participants,
+      isGroup: true,
+      name: args.name,
+      lastMessageAt: now,
+    });
+
+    return conversationId;
+  },
+});
+
 // Get all conversations for current user (DMs)
 export const getConversations = query({
   args: {},
   handler: async (ctx) => {
-    const currentUser = await getCurrentUser(ctx);
-    if (!currentUser) return [];
+    const currentUser = await initializeOrUpdateUser(ctx);
 
-    const conversations = await ctx.db.query("conversations").collect();
+    const conversations = await ctx.db
+      .query("conversations")
+      .collect();
 
-    const userConversations = conversations
-      .filter((conv: any) =>
-        conv.participants.includes(currentUser._id)
-      )
-      .sort((a: any, b: any) => b.lastMessageAt - a.lastMessageAt)
-      .map((conv: any) => {
-        const otherUserId = conv.participants.find(
-          (id: any) => id !== currentUser._id
-        );
-        return {
-          ...conv,
-          otherUserId,
-        };
-      });
+    const userConversations = conversations.filter((c: any) =>
+      c.participants.includes(currentUser._id)
+    );
 
-    // Fetch other users' info for display
+    const sorted = userConversations.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+
     const withUserInfo = await Promise.all(
-      userConversations.map(async (conv: any) => {
-        const otherUser: any = await ctx.db.get(conv.otherUserId);
+      sorted.map(async (conv: any) => {
+        let name = conv.name;
+        let imageUrl = undefined;
+        let otherUserId = undefined;
+
+        if (!conv.isGroup) {
+          otherUserId = conv.participants.find((id: any) => id !== currentUser._id);
+          const otherUser: any = await ctx.db.get(otherUserId);
+          name = otherUser?.name || "User";
+          imageUrl = otherUser?.imageUrl;
+        }
 
         // Count unread messages
         const lastReadAt = conv.lastReadAt?.[currentUser._id] || 0;
@@ -99,20 +122,28 @@ export const getConversations = query({
           )
           .collect();
 
-        // Filter out current user's own messages from unread count
         const unreadCount = unreadMessages.filter((m: any) => m.senderId !== currentUser._id).length;
+
+        // Fetch isTyping for group or DM
+        let isTyping = false;
+        if (conv.typing) {
+          const now = Date.now();
+          isTyping = Object.entries(conv.typing).some(([uid, time]: [string, any]) =>
+            uid !== currentUser._id.toString() && (now - time) < 3000
+          );
+        }
 
         return {
           _id: conv._id,
-          name: otherUser?.name || "User",
-          email: otherUser?.email,
-          imageUrl: otherUser?.imageUrl,
+          name: name || "Group",
+          imageUrl,
           lastMessage: conv.lastMessage,
           lastMessageAt: conv.lastMessageAt,
-          otherUserId: conv.otherUserId,
-          lastSeenAt: otherUser?.lastSeenAt,
-          isTyping: !!(conv.typing?.[conv.otherUserId] && (Date.now() - conv.typing[conv.otherUserId]) < 3000),
+          otherUserId,
+          isGroup: !!conv.isGroup,
+          memberCount: conv.participants.length,
           unreadCount,
+          isTyping,
         };
       })
     );

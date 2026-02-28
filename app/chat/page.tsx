@@ -179,10 +179,28 @@ function ChatContent() {
     };
   });
 
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const createGroup = useMutation((api as any).messages.createGroup);
+  const allUsers = useQuery(api.users.listUsers, {});
+
+  const handleCreateGroup = async () => {
+    if (!groupName.trim() || selectedParticipants.length === 0) return;
+    const conversationId = await createGroup({
+      participantIds: selectedParticipants as any,
+      name: groupName,
+    });
+    setSelectedConversationId(conversationId);
+    setIsGroupModalOpen(false);
+    setGroupName("");
+    setSelectedParticipants([]);
+  };
+
   const displayItems = searchValue.trim() !== "" ? searchItems : chatItems;
 
   return (
-    <main className="flex h-screen flex-col bg-zinc-100">
+    <main className="flex h-screen flex-col bg-zinc-100 relative">
       <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3 shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-zinc-900">Tars Chat</h1>
@@ -216,6 +234,7 @@ function ChatContent() {
                 handleSelectChat(id);
               }
             }}
+            onCreateGroup={() => setIsGroupModalOpen(true)}
           />
         </div>
 
@@ -232,14 +251,11 @@ function ChatContent() {
               error={error}
             />
           ) : (
-            <div className="hidden lg:flex flex-1 flex-col">
-              <ChatCanvas
-                title="Welcome to Tars Chat"
-                subtitle="Select a conversation from the sidebar to start messaging or search for a new contact."
-                buttonText="New Message"
-                hintText="Press ⌘ K to search"
-              />
-              <ChatComposer placeholder="Select a chat to start typing..." disabled />
+            <div className="hidden lg:flex flex-1 flex-col items-center justify-center bg-[#efeae2]/30 space-y-4">
+              <div className="h-20 w-20 bg-white rounded-full flex items-center justify-center text-3xl shadow-sm">
+                💬
+              </div>
+              <p className="text-zinc-500 font-medium">Select a chat to start messaging</p>
             </div>
           )}
         </div>
@@ -249,6 +265,91 @@ function ChatContent() {
           <ChatRightSidebar onChatSelect={handleSelectChat} />
         </div>
       </div>
+
+      {/* Create Group Modal */}
+      {isGroupModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh]">
+            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+              <h2 className="font-bold text-zinc-900">Create New Group</h2>
+              <button
+                onClick={() => setIsGroupModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="text-[11px] font-bold text-zinc-400 tracking-wider block mb-1.5 uppercase">Group Name</label>
+                <input
+                  type="text"
+                  placeholder="Enter group name..."
+                  className="w-full border border-zinc-200 rounded-xl px-4 py-2 text-sm focus:border-indigo-500 outline-none transition-colors"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-zinc-400 tracking-wider block mb-1.5 uppercase">Add Members</label>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {allUsers === undefined ? (
+                    <div className="text-center py-4 text-xs text-zinc-400 italic">Finding users...</div>
+                  ) : allUsers.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-zinc-400">No users found</div>
+                  ) : (
+                    allUsers.map((u: any) => (
+                      <label
+                        key={u._id}
+                        className={`flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer ${selectedParticipants.includes(u._id)
+                            ? 'border-indigo-600 bg-indigo-50 shadow-sm'
+                            : 'border-zinc-100 hover:border-zinc-200 bg-white'
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={selectedParticipants.includes(u._id)}
+                          onChange={() => {
+                            if (selectedParticipants.includes(u._id)) {
+                              setSelectedParticipants(selectedParticipants.filter(id => id !== u._id));
+                            } else {
+                              setSelectedParticipants([...selectedParticipants, u._id]);
+                            }
+                          }}
+                        />
+                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+                          {u.name?.[0] || 'U'}
+                        </div>
+                        <span className="text-sm font-medium text-zinc-700 flex-1">{u.name}</span>
+                        {selectedParticipants.includes(u._id) && (
+                          <div className="h-4 w-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-zinc-50 border-t border-zinc-100">
+              <button
+                onClick={handleCreateGroup}
+                disabled={!groupName.trim() || selectedParticipants.length === 0}
+                className="w-full bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98]"
+              >
+                Create Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -405,8 +506,8 @@ function ChatWindow({
                   <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[85%] lg:max-w-[70%]`}>
                     <div
                       className={`rounded-2xl px-3 py-1.5 shadow-sm relative transition-all ${isMine
-                          ? 'bg-indigo-600 text-white rounded-tr-none'
-                          : 'bg-white text-zinc-800 rounded-tl-none'
+                        ? 'bg-indigo-600 text-white rounded-tr-none'
+                        : 'bg-white text-zinc-800 rounded-tl-none'
                         }`}
                     >
                       {!isMine && msg.sender.name && (
