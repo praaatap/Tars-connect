@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
@@ -13,7 +13,10 @@ import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatRightSidebar } from "../components/chat/ChatRightSidebar";
 import { GroupInvitesPanel } from "../components/chat/GroupInvitesPanel";
 import { GroupMembersModal } from "../components/chat/GroupMembersModal";
+import { SettingsModal } from "../components/chat/SettingsModal";
+import { AISuggestionsModal } from "../components/chat/AISuggestionsModal";
 import { MainHeader } from "../components/MainHeader";
+import { useUIStore } from "../store/useUIStore";
 
 export default function ChatPage() {
   return (
@@ -58,6 +61,44 @@ function ChatContent() {
   const { user } = useUser();
   const [searchValue, setSearchValue] = useState("");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const {
+    sidebarWidth,
+    setSidebarWidth,
+    uiScale,
+    setUIScale,
+    isSettingsOpen,
+    setIsSettingsOpen
+  } = useUIStore();
+  const isResizing = useRef(false);
+
+  // Apply scaling on boot
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${uiScale * 16}px`;
+  }, [uiScale]);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    isResizing.current = true;
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", stopResizing);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizing.current = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", stopResizing);
+    document.body.style.cursor = "default";
+    document.body.style.userSelect = "auto";
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return;
+    const newWidth = e.clientX;
+    if (newWidth >= 260 && newWidth <= 480) {
+      setSidebarWidth(newWidth);
+    }
+  }, [setSidebarWidth]);
 
   // Initialize user in database on first load
   const initializeUser = useMutation((api as any).messages.initializeUser);
@@ -90,6 +131,7 @@ function ChatContent() {
   const getOrCreateConversation = useMutation((api as any).messages.getOrCreateConversation);
   const updatePresence = useMutation((api as any).users.updatePresence);
   const markAsRead = useMutation((api as any).messages.markAsRead);
+  const hideConversation = useMutation((api as any).messages.hideConversation);
 
   // Presence heartbeat
   useEffect(() => {
@@ -148,7 +190,7 @@ function ChatContent() {
       : "skip"
   );
 
-  const handleSendMessage = async (messageBody: string) => {
+  const handleSendMessage = async (messageBody: string, replyTo?: string, replyToUser?: string) => {
     if (!selectedConversationId || !messageBody.trim() || isSending) return;
 
     setIsSending(true);
@@ -157,6 +199,8 @@ function ChatContent() {
       await sendMessage({
         conversationId: selectedConversationId as any,
         body: messageBody,
+        replyTo,
+        replyToUser,
       });
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -254,14 +298,17 @@ function ChatContent() {
 
       <div className="flex min-h-0 flex-1 relative overflow-hidden">
         {/* Sidebar - hidden on mobile when a chat is selected */}
-        <div className={`w-full lg:w-[320px] lg:flex shrink-0 flex-col ${selectedConversationId ? 'hidden' : 'flex'}`}>
+        <div
+          className={`lg:flex shrink-0 flex-col border-r border-zinc-200 bg-white group/sidebar relative ${selectedConversationId ? 'hidden' : 'flex w-full'}`}
+          style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${sidebarWidth}px` : undefined }}
+        >
           <GroupInvitesPanel
             invites={pendingInvites ?? []}
             onAccept={handleAcceptInvite}
             onReject={handleRejectInvite}
           />
           <ChatSidebar
-            userName={currentUser?.name || user?.firstName || "User"}
+            userName={(currentUser?.name || user?.firstName || "User").split(',')[0].trim()}
             userStatus="Online"
             imageUrl={currentUser?.imageUrl}
             sectionTitle={searchValue.trim() !== "" ? "SEARCH RESULTS" : "MESSAGES"}
@@ -283,11 +330,18 @@ function ChatContent() {
             onCreateGroup={() => setIsGroupModalOpen(true)}
             suggestedUsers={suggestedUsers}
             onUserSelect={handleSelectUser}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+
+          {/* Resize Handle */}
+          <div
+            onMouseDown={startResizing}
+            className="absolute -right-1 top-0 bottom-0 w-2 cursor-col-resize z-50 hover:bg-indigo-500/20 active:bg-indigo-500/40 transition-colors hidden lg:block"
           />
         </div>
 
         {/* Chat Window - takes full width on mobile when selected */}
-        <div className={`flex min-h-0 flex-1 flex-col ${!selectedConversationId ? 'hidden lg:flex' : 'flex'}`}>
+        <div className={`flex min-h-0 flex-1 flex-col min-w-0 ${!selectedConversationId ? 'hidden lg:flex' : 'flex'}`}>
           {selectedConversationId && messages ? (
             <ChatWindow
               messages={messages}
@@ -300,6 +354,12 @@ function ChatContent() {
               isGroupChat={conversations?.find((c: any) => c._id === selectedConversationId)?.isGroup}
               groupMembers={getGroupMembers ?? []}
               onAddMembers={() => setIsAddMembersOpen(true)}
+              onDelete={async () => {
+                if (selectedConversationId) {
+                  await hideConversation({ conversationId: selectedConversationId as any });
+                  setSelectedConversationId(null);
+                }
+              }}
             />
           ) : (
             <div className="hidden lg:flex flex-1 flex-col items-center justify-center bg-[#efeae2]/30 space-y-4">
@@ -337,7 +397,7 @@ function ChatContent() {
                 <input
                   type="text"
                   placeholder="Enter group name..."
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2 text-sm focus:border-indigo-500 outline-none transition-colors"
+                  className="w-full border text-black border-zinc-200 rounded-xl px-4 py-2 text-sm focus:border-indigo-500 outline-none transition-colors"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                 />
@@ -413,6 +473,13 @@ function ChatContent() {
           onInvite={handleSendGroupInvites}
         />
       )}
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        uiScale={uiScale}
+        onScaleChange={setUIScale}
+      />
     </main>
   );
 }
@@ -428,6 +495,7 @@ function ChatWindow({
   isGroupChat,
   groupMembers,
   onAddMembers,
+  onDelete,
 }: {
   messages: any[];
   onSendMessage: (message: string) => void;
@@ -439,11 +507,18 @@ function ChatWindow({
   isGroupChat?: boolean;
   groupMembers?: any[];
   onAddMembers?: () => void;
+  onDelete?: () => void;
 }) {
+  const { user } = useUser();
+  const userName = user?.firstName || "the user";
   const [input, setInput] = useState("");
+  const [replyTo, setReplyTo] = useState<{ id: string, body: string, user: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   const setTyping = useMutation((api as any).messages.setTyping);
   const clearTyping = useMutation((api as any).messages.clearTyping);
@@ -458,11 +533,20 @@ function ChatWindow({
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
     const currentInput = input;
+    const currentReplyTo = replyTo;
+
     setInput("");
+    setReplyTo(null);
+
     if (selectedConversation?._id) {
       clearTyping({ conversationId: selectedConversation._id });
     }
-    await onSendMessage(currentInput);
+
+    try {
+      await (onSendMessage as any)(currentInput, currentReplyTo?.body, currentReplyTo?.user);
+    } catch (err) {
+      console.error("Failed to send:", err);
+    }
 
     // Force scroll to bottom after sending
     setTimeout(() => {
@@ -470,6 +554,76 @@ function ChatWindow({
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }
     }, 100);
+  };
+
+  const handleGetAiSuggestions = async () => {
+    // Don't try to get suggestions if there's no context
+    if (messages.length === 0 && !replyTo) {
+      console.log("No messages or reply context for AI suggestions");
+      setAiSuggestions([]);
+      setIsAiModalOpen(true);
+      return;
+    }
+
+    setIsAiLoading(true);
+    setIsAiModalOpen(true);
+    try {
+      let context = messages.slice(-5).map(m => {
+        const sender = m.sender?.name || "User";
+        const body = m.body || "";
+        return `${sender}: ${body}`;
+      }).join("\n");
+
+      if (replyTo) {
+        context = `REPLYING TO [${replyTo.user}: ${replyTo.body}]\n\nRecent History:\n${context}`;
+      }
+
+      console.log("Context prepared for AI:", context.substring(0, 100) + "...");
+
+      if (!context.trim()) {
+        console.log("Context is empty after processing");
+        setAiSuggestions([]);
+        setIsAiLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/ai/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          context,
+          userName: "the user"
+        })
+      });
+
+      console.log("API response status:", res.status);
+
+      if (!res.ok) {
+        console.error("AI API error:", res.status);
+        setAiSuggestions([]);
+        setIsAiLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("API response data:", data);
+      
+      if (data.error) {
+        console.error("AI error:", data.error);
+        setAiSuggestions([]);
+      } else if (Array.isArray(data.suggestions)) {
+        console.log("Suggestions received:", data.suggestions.length);
+        setAiSuggestions(data.suggestions);
+      } else {
+        console.warn("Unexpected response format:", data);
+        setAiSuggestions([]);
+      }
+    } catch (err) {
+      console.error("AI fetch failed:", err);
+      setAiSuggestions([]);
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const handleScroll = () => {
@@ -506,6 +660,7 @@ function ChatWindow({
           <button
             onClick={onBack}
             className="p-1 -ml-1 text-zinc-600 hover:text-zinc-900 lg:hidden"
+            aria-label="Back to conversations"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -534,17 +689,37 @@ function ChatWindow({
           </div>
         </div>
 
-        {isGroupChat && onAddMembers && (
-          <button
-            onClick={onAddMembers}
-            className="p-2 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="Add members"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onDelete && (
+            <button
+              onClick={() => {
+                if (confirm("Are you sure you want to delete this conversation? This will hide it from your list.")) {
+                  onDelete();
+                }
+              }}
+              className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Delete Chat"
+              aria-label="Delete Conversation"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+
+          {isGroupChat && onAddMembers && (
+            <button
+              onClick={onAddMembers}
+              className="p-2 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              title="Group Details"
+              aria-label="View Group Details and Members"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div
@@ -600,6 +775,15 @@ function ChatWindow({
                         <p className="text-[11px] font-bold text-indigo-600 mb-0.5">{msg.sender.name}</p>
                       )}
 
+                      {msg.replyTo && (
+                        <div className={`mb-2 p-2 rounded-lg border-l-4 text-xs ${isMine ? 'bg-white/10 border-white/30 text-white/90' : 'bg-zinc-50 border-indigo-200 text-zinc-500'} italic`}>
+                          <p className="font-bold not-italic mb-0.5 text-[10px] uppercase opacity-70">
+                            {msg.replyToUser || 'User'} said:
+                          </p>
+                          <p className="line-clamp-2">{msg.replyTo}</p>
+                        </div>
+                      )}
+
                       <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-all ${msg.deleted ? 'italic text-opacity-70' : ''}`}>
                         {msg.body}
                       </p>
@@ -624,6 +808,15 @@ function ChatWindow({
                       {/* Reaction Picker Popover (Desktop) */}
                       {!msg.deleted && (
                         <div className={`absolute top-0 ${isMine ? 'right-full mr-2' : 'left-full ml-2'} opacity-0 group-hover:opacity-100 flex gap-1 bg-white shadow-lg rounded-full px-2 py-1 border border-zinc-100 z-20 transition-all scale-90 group-hover:scale-100`}>
+                          <button
+                            onClick={() => setReplyTo({ id: msg._id, body: msg.body, user: msg.sender.name })}
+                            className="hover:scale-125 transition-transform p-1 text-zinc-400 hover:text-indigo-600"
+                            title="Reply"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                          </button>
                           {['👍', '❤️', '😂', '😮', '😢'].map(emoji => (
                             <button
                               key={emoji}
@@ -678,8 +871,35 @@ function ChatWindow({
           </button>
         )}
       </div>
+
+      {/* Reply Preview */}
+      {replyTo && (
+        <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-1 bg-indigo-500 h-8 rounded-full shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Replying to {replyTo.user}</p>
+              <p className="text-xs text-zinc-500 truncate font-medium">{replyTo.body}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setReplyTo(null)}
+            className="h-6 w-6 flex items-center justify-center rounded-full bg-zinc-200 text-zinc-500 hover:bg-zinc-300 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="border-t border-zinc-200 bg-white px-4 py-3 shrink-0">
         <div className="flex items-center gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2">
+          <button
+            onClick={handleGetAiSuggestions}
+            className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all cursor-pointer group"
+            title="AI Suggest Reply"
+          >
+            <span className="text-lg group-hover:scale-110 transition-transform">✨</span>
+          </button>
           <input
             className="flex-1 bg-transparent text-[14px] text-zinc-700 outline-none"
             placeholder="Type a message..."
@@ -713,6 +933,18 @@ function ChatWindow({
           </button>
         </div>
       </div>
+
+      <AISuggestionsModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        isLoading={isAiLoading}
+        suggestions={aiSuggestions}
+        hasMessages={messages.length > 0}
+        onSelect={(s) => {
+          setInput(s);
+          setIsAiModalOpen(false);
+        }}
+      />
     </>
   );
 }

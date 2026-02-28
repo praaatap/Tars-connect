@@ -44,7 +44,7 @@ export function GroupMembersModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh]">
         <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-          <h2 className="font-bold text-zinc-900">Add Members to {groupName}</h2>
+          <h2 className="font-bold text-zinc-900">Group Details: {groupName}</h2>
           <button
             onClick={onClose}
             className="text-zinc-400 hover:text-zinc-600 p-1"

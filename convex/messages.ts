@@ -96,7 +96,9 @@ export const getConversations = query({
       .collect();
 
     const userConversations = conversations.filter((c: any) =>
-      c.participants.includes(currentUser._id)
+      c.participants.map((p: any) => p.toString()).includes(currentUser._id.toString()) &&
+      !(c.hiddenBy || []).map((h: any) => h.toString()).includes(currentUser._id.toString()) &&
+      (c.isGroup || c.lastMessage) // Don't show empty DMs
     );
 
     const sorted = userConversations.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
@@ -237,6 +239,8 @@ export const getMessagesForConversation = query({
           },
           reactions,
           userReaction: currentUser ? msg.reactions?.[currentUser._id] : undefined,
+          replyTo: msg.replyTo,
+          replyToUser: msg.replyToUser,
         };
       })
     );
@@ -248,6 +252,8 @@ export const sendMessage = mutation({
   args: {
     conversationId: v.id("conversations"),
     body: v.string(),
+    replyTo: v.optional(v.string()),
+    replyToUser: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const currentUser = await initializeOrUpdateUser(ctx);
@@ -265,6 +271,8 @@ export const sendMessage = mutation({
       senderId: currentUser._id,
       body: normalized,
       createdAt: now,
+      replyTo: args.replyTo,
+      replyToUser: args.replyToUser,
     });
 
     // Update conversation's last message
@@ -281,10 +289,29 @@ export const sendMessage = mutation({
       lastReadAt: {
         ...((await ctx.db.get(args.conversationId))?.lastReadAt || {}),
         [currentUser._id]: now,
-      }
+      },
+      hiddenBy: [], // Reset hidden status when a new message is sent
     });
 
     return messageId;
+  },
+});
+
+// Hide a conversation (soft delete for the user)
+export const hideConversation = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const conversation = await ctx.db.get(args.conversationId);
+
+    if (!conversation) return;
+
+    const hiddenBy = conversation.hiddenBy || [];
+    if (!hiddenBy.map((id: any) => id.toString()).includes(currentUser._id.toString())) {
+      await ctx.db.patch(args.conversationId, {
+        hiddenBy: [...hiddenBy, currentUser._id],
+      });
+    }
   },
 });
 
@@ -380,17 +407,29 @@ export const getOrCreateConversation = mutation({
 export const getSuggestedUsers = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
     const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) return [];
+
+    // Get all conversations for current user to exclude existing contacts
+    const conversations = await ctx.db
+      .query("conversations")
+      .collect();
+
+    const existingParticipantIds = new Set(
+      conversations
+        .filter((c: any) => c.participants.includes(currentUser._id))
+        .flatMap((c: any) => c.participants.map((id: any) => id.toString()))
+    );
+
     const users = await ctx.db.query("users").collect();
 
-    if (!currentUser) return users;
-
-    return users.filter((u: any) => u._id !== currentUser._id).slice(0, 10);
+    // Filter out: current user AND people who already have a conversation
+    return users
+      .filter((u: any) =>
+        u._id.toString() !== currentUser._id.toString() &&
+        !existingParticipantIds.has(u._id.toString())
+      )
+      .slice(0, 5); // Limit to 5 suggestions
   },
 });
 
@@ -463,6 +502,18 @@ export const getPendingInvites = query({
         const conversation: any = await ctx.db.get(invite.conversationId);
         const invitedBy: any = await ctx.db.get(invite.invitedByUserId);
 
+        // Find other people invited to the same group
+        const allInvites = await ctx.db.query("groupChatInvites").collect();
+        const otherInvitedDetails = await Promise.all(
+          allInvites
+            .filter((i: any) => i.conversationId === invite.conversationId && i.invitedUserId !== currentUser._id && i.status === "pending")
+            .slice(0, 3)
+            .map(async (i: any) => {
+              const u: any = await ctx.db.get(i.invitedUserId);
+              return u?.name || "User";
+            })
+        );
+
         return {
           _id: invite._id,
           conversationId: invite.conversationId,
@@ -470,6 +521,7 @@ export const getPendingInvites = query({
           conversationImage: undefined,
           invitedBy: invitedBy?.name || "User",
           invitedByImage: invitedBy?.imageUrl,
+          otherInvitedUsers: otherInvitedDetails,
           status: invite.status,
           createdAt: invite.createdAt,
         };

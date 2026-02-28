@@ -31,6 +31,7 @@ export default defineSchema({
     lastMessageSenderId: v.optional(v.id("users")),
     typing: v.optional(v.record(v.string(), v.number())),
     lastReadAt: v.optional(v.record(v.string(), v.number())),
+    hiddenBy: v.optional(v.array(v.id("users"))),
   }).index("by_participants", ["participants"]),
 
   messages: defineTable({
@@ -40,6 +41,8 @@ export default defineSchema({
     createdAt: v.number(),
     deleted: v.optional(v.boolean()),
     reactions: v.optional(v.record(v.string(), v.string())),
+    replyTo: v.optional(v.string()),
+    replyToUser: v.optional(v.string()),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_conversation_createdAt", ["conversationId", "createdAt"]),

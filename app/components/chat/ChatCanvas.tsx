@@ -22,7 +22,7 @@ export function ChatCanvas({
         </div>
         <h2 className="text-4xl font-bold text-zinc-900">{title}</h2>
         <p className="mt-3 max-w-xl text-zinc-500">{subtitle}</p>
-        <button className="mt-8 rounded-full bg-indigo-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-500">
+        <button className="mt-8 rounded-full bg-indigo-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-500 cursor-pointer">
           {buttonText}
         </button>
         <p className="mt-9 rounded-lg bg-zinc-100 px-4 py-2 text-xs text-zinc-400">

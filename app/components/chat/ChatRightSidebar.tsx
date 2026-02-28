@@ -29,7 +29,7 @@ export function ChatRightSidebar({
                         <button
                             key={user._id}
                             onClick={() => startChat(user._id)}
-                            className="flex flex-col items-start rounded-xl px-2 py-2 text-left transition hover:bg-zinc-50"
+                            className="flex flex-col items-start rounded-xl px-2 py-2 text-left transition hover:bg-zinc-50 cursor-pointer"
                         >
                             <div className="flex items-center gap-3 w-full">
                                 <div className="relative shrink-0">

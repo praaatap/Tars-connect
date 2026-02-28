@@ -9,6 +9,7 @@ type GroupInvite = {
   invitedByImage?: string;
   status: "pending" | "accepted" | "rejected";
   createdAt: number;
+  otherInvitedUsers?: string[];
 };
 
 type GroupInvitesPanelProps = {
@@ -65,45 +66,46 @@ export function GroupInvitesPanel({
             pendingInvites.map((invite) => (
               <div
                 key={invite._id}
-                className="flex items-center gap-3 p-2.5 rounded-lg border border-zinc-100 bg-white hover:bg-zinc-50 transition-colors"
+                className="flex flex-col gap-3 p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/30 backdrop-blur-sm"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900 truncate">
-                    {invite.conversationName}
-                  </p>
-                  <p className="text-xs text-zinc-500 truncate">
-                    Invited by {invite.invitedBy}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0 shadow-sm border border-white">
+                    {invite.conversationName[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-zinc-900 truncate">
+                      {invite.conversationName}
+                    </p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      Invited by <span className="font-semibold text-zinc-700">{invite.invitedBy}</span>
+                    </p>
+                    {invite.otherInvitedUsers && invite.otherInvitedUsers.length > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 grayscale opacity-70">
+                        <div className="flex -space-x-2">
+                          {invite.otherInvitedUsers.map((_, i) => (
+                            <div key={i} className="h-4 w-4 rounded-full bg-zinc-200 border border-white" />
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-zinc-400 font-medium">
+                          {invite.otherInvitedUsers.join(", ")} also invited
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => onAccept(invite._id)}
-                    className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                    title="Accept invite"
+                    className="flex-1 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-all text-[11px] font-bold shadow-md shadow-indigo-100 active:scale-[0.98]"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                    Accept
                   </button>
                   <button
                     onClick={() => onReject(invite._id)}
-                    className="p-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
-                    title="Reject invite"
+                    className="flex-1 py-1.5 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-all text-[11px] font-bold active:scale-[0.98]"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    Decline
                   </button>
                 </div>
               </div>
