@@ -88,7 +88,8 @@ export const createGroup = mutation({
 export const getConversations = query({
   args: {},
   handler: async (ctx) => {
-    const currentUser = await initializeOrUpdateUser(ctx);
+    const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) return [];
 
     const conversations = await ctx.db
       .query("conversations")
@@ -193,6 +194,7 @@ export const toggleReaction = mutation({
 export const getMessagesForConversation = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
+    const currentUser = await getCurrentUser(ctx);
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation_createdAt", (q) => q.eq("conversationId", args.conversationId))
@@ -220,7 +222,7 @@ export const getMessagesForConversation = query({
             imageUrl: sender?.imageUrl
           },
           reactionCounts,
-          userReaction: msg.reactions?.[sender?._id || ""], // We need current user ID context usually, but we can handle this in UI
+          userReaction: currentUser ? msg.reactions?.[currentUser._id] : undefined,
         };
       })
     );
