@@ -214,18 +214,19 @@ function ChatContent() {
   // Convert conversations to sidebar format
   const chatItems = (conversations ?? []).map((conv: any) => {
     const timeAgo = formatMessageTimestamp(conv.lastMessageAt);
-    const isOnline = conv.lastSeenAt ? (Date.now() - conv.lastSeenAt) < 60000 : false;
 
     return {
       name: conv.name,
-      message: conv.lastMessage || "No messages yet",
+      message: conv.isTyping ? "Typing..." : (conv.lastMessage || "No messages yet"),
       time: timeAgo,
       active: selectedConversationId === conv._id,
       conversationId: conv._id,
       isUser: false,
-      isOnline,
+      isOnline: conv.isOnline,
       unreadCount: conv.unreadCount || 0,
       imageUrl: conv.imageUrl,
+      isGroup: conv.isGroup,
+      memberCount: conv.memberCount,
     };
   });
 

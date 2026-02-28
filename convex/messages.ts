@@ -134,6 +134,15 @@ export const getConversations = query({
           );
         }
 
+        // Determine online status for DMs
+        let isOnline = false;
+        if (!conv.isGroup && otherUserId) {
+          const otherUser: any = await ctx.db.get(otherUserId);
+          if (otherUser?.lastSeenAt) {
+            isOnline = (Date.now() - otherUser.lastSeenAt) < 60000;
+          }
+        }
+
         return {
           _id: conv._id,
           name: name || "Group",
@@ -142,6 +151,7 @@ export const getConversations = query({
           lastMessageAt: conv.lastMessageAt,
           otherUserId,
           isGroup: !!conv.isGroup,
+          isOnline,
           memberCount: conv.participants.length,
           unreadCount,
           isTyping,
