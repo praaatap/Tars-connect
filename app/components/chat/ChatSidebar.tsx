@@ -100,15 +100,16 @@ export function ChatSidebar({
 
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-4">
         {chats.length === 0 ? (
-          <p className="px-2 py-4 text-center text-sm text-zinc-400">No conversations yet</p>
+          <p className="px-2 py-8 text-center text-sm text-zinc-400">
+            {searchValue.trim() !== "" ? "No people found" : "No conversations yet"}
+          </p>
         ) : (
           chats.map((chat) => (
             <button
               key={chat.conversationId}
               onClick={() => chat.conversationId && onChatSelect(chat.conversationId)}
-              className={`flex items-start justify-between rounded-xl px-2 py-2 text-left transition ${
-                chat.active ? "bg-zinc-100" : "hover:bg-zinc-50"
-              }`}
+              className={`flex items-start justify-between rounded-xl px-2 py-2 text-left transition ${chat.active ? "bg-zinc-100" : "hover:bg-zinc-50"
+                }`}
             >
               <div className="flex items-start gap-2 flex-1">
                 <div className="mt-1 h-8 w-8 rounded-full bg-zinc-200" />

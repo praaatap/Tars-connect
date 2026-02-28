@@ -193,8 +193,14 @@ function ChatWindow({
     <>
       <div className="flex-1 overflow-y-auto bg-white p-6 space-y-4">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-zinc-400">
-            <p>No messages yet. Start the conversation!</p>
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
+            <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">
+              👋
+            </div>
+            <div className="max-w-xs">
+              <p className="text-zinc-900 font-medium">No messages yet</p>
+              <p className="text-zinc-500 text-sm mt-1">Start the conversation by sending a message below!</p>
+            </div>
           </div>
         ) : (
           messages.map((msg: any) => (
