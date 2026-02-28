@@ -16,6 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tars Connect",
   description: "A Tars Connect is a tool that allows you to connect to your Tars Members",
+  icons: {
+    icon: "/favicon.png",
+  },
+  openGraph: {
+    title: "Tars Connect",
+    description: "Connect instantly. Collaborate effortlessly.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
