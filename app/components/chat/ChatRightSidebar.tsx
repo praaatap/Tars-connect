@@ -32,13 +32,18 @@ export function ChatRightSidebar({
                             className="flex flex-col items-start rounded-xl px-2 py-2 text-left transition hover:bg-zinc-50"
                         >
                             <div className="flex items-center gap-3 w-full">
-                                {user.imageUrl ? (
-                                    <img src={user.imageUrl} alt={user.name || "User"} className="h-8 w-8 shrink-0 rounded-full bg-zinc-200 object-cover" />
-                                ) : (
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
-                                        {(user.name || "User")[0].toUpperCase()}
-                                    </div>
-                                )}
+                                <div className="relative shrink-0">
+                                    {user.imageUrl ? (
+                                        <img src={user.imageUrl} alt={user.name || "User"} className="h-8 w-8 rounded-full bg-zinc-200 object-cover" />
+                                    ) : (
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                                            {(user.name || "User")[0].toUpperCase()}
+                                        </div>
+                                    )}
+                                    {user.lastSeenAt && (Date.now() - user.lastSeenAt < 60000) && (
+                                        <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+                                    )}
+                                </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-zinc-900 truncate">{user.name || "Anonymous User"}</p>
                                 </div>
