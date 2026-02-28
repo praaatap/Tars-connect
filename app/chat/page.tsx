@@ -297,11 +297,11 @@ function ChatContent() {
               messages={messages}
               onSendMessage={handleSendMessage}
               onBack={() => setSelectedConversationId(null)}
-              selectedConversation={conversations?.find((c: any) => c._id === selectedConversationId)}
+              selectedConversation={selectedConversationData || conversations?.find((c: any) => c._id === selectedConversationId)}
               currentUserId={currentUser?._id}
               isSending={isSending}
               error={error}
-              isGroupChat={conversations?.find((c: any) => c._id === selectedConversationId)?.isGroup}
+              isGroupChat={selectedConversationData?.isGroup ?? conversations?.find((c: any) => c._id === selectedConversationId)?.isGroup}
               groupMembers={getGroupMembers ?? []}
               onAddMembers={() => setIsAddMembersOpen(true)}
               onDelete={async () => {
