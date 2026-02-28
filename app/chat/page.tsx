@@ -129,35 +129,42 @@ function ChatContent() {
         <UserButton afterSignOutUrl="/" />
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <ChatSidebar
-          userName={user?.firstName || "User"}
-          userStatus="Online"
-          sectionTitle={searchValue.trim() !== "" ? "SEARCH RESULTS" : "MESSAGES"}
-          searchPlaceholder="Search people..."
-          chats={displayItems as any}
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-          onSearchSubmit={handleSearchSubmit}
-          searchHistory={searchHistory ?? []}
-          onHistorySelect={handleHistorySelect}
-          onChatSelect={(id) => {
-            const item = displayItems.find((i: any) => i.conversationId === id);
-            if (item?.isUser) {
-              handleSelectUser(id);
-            } else {
-              handleSelectChat(id);
-            }
-          }}
-        />
-        <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 relative overflow-hidden">
+        {/* Sidebar - hidden on mobile when a chat is selected */}
+        <div className={`w-full lg:w-[320px] lg:flex shrink-0 ${selectedConversationId ? 'hidden' : 'flex'}`}>
+          <ChatSidebar
+            userName={user?.firstName || "User"}
+            userStatus="Online"
+            sectionTitle={searchValue.trim() !== "" ? "SEARCH RESULTS" : "MESSAGES"}
+            searchPlaceholder="Search people..."
+            chats={displayItems as any}
+            searchValue={searchValue}
+            onSearchChange={setSearchValue}
+            onSearchSubmit={handleSearchSubmit}
+            searchHistory={searchHistory ?? []}
+            onHistorySelect={handleHistorySelect}
+            onChatSelect={(id) => {
+              const item = displayItems.find((i: any) => i.conversationId === id);
+              if (item?.isUser) {
+                handleSelectUser(id);
+              } else {
+                handleSelectChat(id);
+              }
+            }}
+          />
+        </div>
+
+        {/* Chat Window - takes full width on mobile when selected */}
+        <div className={`flex min-h-0 flex-1 flex-col ${!selectedConversationId ? 'hidden lg:flex' : 'flex'}`}>
           {selectedConversationId && messages ? (
             <ChatWindow
               messages={messages}
               onSendMessage={handleSendMessage}
+              onBack={() => setSelectedConversationId(null)}
+              selectedConversation={conversations?.find((c: any) => c._id === selectedConversationId)}
             />
           ) : (
-            <>
+            <div className="hidden lg:flex flex-1 flex-col">
               <ChatCanvas
                 title="Welcome to Tars Chat"
                 subtitle="Select a conversation from the sidebar to start messaging or search for a new contact."
@@ -165,10 +172,14 @@ function ChatContent() {
                 hintText="Press ⌘ K to search"
               />
               <ChatComposer placeholder="Select a chat to start typing..." disabled />
-            </>
+            </div>
           )}
         </div>
-        <ChatRightSidebar onChatSelect={handleSelectChat} />
+
+        {/* Right Sidebar - hidden on mobile */}
+        <div className="hidden xl:block">
+          <ChatRightSidebar onChatSelect={handleSelectChat} />
+        </div>
       </div>
     </main>
   );
@@ -177,9 +188,13 @@ function ChatContent() {
 function ChatWindow({
   messages,
   onSendMessage,
+  onBack,
+  selectedConversation,
 }: {
   messages: any[];
   onSendMessage: (message: string) => void;
+  onBack: () => void;
+  selectedConversation?: any;
 }) {
   const [input, setInput] = useState("");
 
@@ -191,30 +206,45 @@ function ChatWindow({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto bg-white p-6 space-y-4">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
-            <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">
-              👋
-            </div>
-            <div className="max-w-xs">
-              <p className="text-zinc-900 font-medium">No messages yet</p>
-              <p className="text-zinc-500 text-sm mt-1">Start the conversation by sending a message below!</p>
+      {/* Mobile-only header with back button */}
+      <div className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 lg:hidden">
+        <button
+          onClick={onBack}
+          className="p-1 -ml-1 text-zinc-600 hover:text-zinc-900"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+            {selectedConversation?.name?.[0] || 'C'}
+          </div>
+          <span className="font-medium text-zinc-900">{selectedConversation?.name}</span>
+        </div>
+      </div>
+      {messages.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
+          <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">
+            👋
+          </div>
+          <div className="max-w-xs">
+            <p className="text-zinc-900 font-medium">No messages yet</p>
+            <p className="text-zinc-500 text-sm mt-1">Start the conversation by sending a message below!</p>
+          </div>
+        </div>
+      ) : (
+        messages.map((msg: any) => (
+          <div key={msg._id} className="flex gap-3">
+            <div className="h-8 w-8 rounded-full bg-indigo-200 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-zinc-900">{msg.sender.name}</p>
+              <p className="text-sm text-zinc-700 mt-1">{msg.body}</p>
+              <p className="text-xs text-zinc-400 mt-1">{formatMessageTimestamp(msg.createdAt)}</p>
             </div>
           </div>
-        ) : (
-          messages.map((msg: any) => (
-            <div key={msg._id} className="flex gap-3">
-              <div className="h-8 w-8 rounded-full bg-indigo-200 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-zinc-900">{msg.sender.name}</p>
-                <p className="text-sm text-zinc-700 mt-1">{msg.body}</p>
-                <p className="text-xs text-zinc-400 mt-1">{formatMessageTimestamp(msg.createdAt)}</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+        ))
+      )}
       <div className="border-t border-zinc-200 bg-white px-5 py-4">
         <div className="flex items-center gap-3 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2.5">
           <input
