@@ -104,7 +104,7 @@ function ChatContent() {
 
   // Convert conversations to sidebar format
   const chatItems = (conversations ?? []).map((conv: any) => {
-    const timeAgo = getTimeAgo(conv.lastMessageAt);
+    const timeAgo = formatMessageTimestamp(conv.lastMessageAt);
     return {
       name: conv.name,
       message: conv.lastMessage || "No messages yet",
@@ -203,7 +203,7 @@ function ChatWindow({
               <div className="flex-1">
                 <p className="text-sm font-medium text-zinc-900">{msg.sender.name}</p>
                 <p className="text-sm text-zinc-700 mt-1">{msg.body}</p>
-                <p className="text-xs text-zinc-400 mt-1">{getTimeAgo(msg.createdAt)}</p>
+                <p className="text-xs text-zinc-400 mt-1">{formatMessageTimestamp(msg.createdAt)}</p>
               </div>
             </div>
           ))
@@ -235,16 +235,35 @@ function ChatWindow({
   );
 }
 
-function getTimeAgo(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
+function formatMessageTimestamp(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
 
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
+  const isToday = date.toDateString() === now.toDateString();
+  const isSameYear = date.getFullYear() === now.getFullYear();
 
-  if (diff < minute) return "Just now";
-  if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`;
-  return `${Math.floor(diff / day)}d ago`;
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  };
+
+  if (isToday) {
+    return date.toLocaleTimeString('en-US', timeOptions);
+  }
+
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    ...timeOptions
+  };
+
+  if (isSameYear) {
+    return date.toLocaleTimeString('en-US', dateOptions);
+  }
+
+  return date.toLocaleTimeString('en-US', {
+    ...dateOptions,
+    year: 'numeric'
+  });
 }
