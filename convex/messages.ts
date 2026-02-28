@@ -1,8 +1,25 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-// Get current user
+// Get current user (read-only for queries)
 async function getCurrentUser(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return null;
+  }
+
+  let user = await ctx.db
+    .query("users")
+    .withIndex("by_tokenIdentifier", (q: any) =>
+      q.eq("tokenIdentifier", identity.tokenIdentifier),
+    )
+    .unique();
+
+  return user || null;
+}
+
+// Initialize or update user (call from mutations)
+async function initializeOrUpdateUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     throw new Error("Not authenticated");
@@ -35,6 +52,14 @@ async function getCurrentUser(ctx: any) {
 
   return user;
 }
+
+// Initialize user on first login (call this first)
+export const initializeUser = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await initializeOrUpdateUser(ctx);
+  },
+});
 
 // Get all conversations for current user (DMs)
 export const getConversations = query({
@@ -119,7 +144,7 @@ export const sendMessage = mutation({
     body: v.string(),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getCurrentUser(ctx);
+    const currentUser = await initializeOrUpdateUser(ctx);
     const normalized = args.body.trim();
 
     if (!normalized) {
@@ -153,7 +178,7 @@ export const getOrCreateConversation = mutation({
     otherUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getCurrentUser(ctx);
+    const currentUser = await initializeOrUpdateUser(ctx);
 
     const participants = [currentUser._id, args.otherUserId].sort();
 

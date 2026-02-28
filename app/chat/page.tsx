@@ -1,21 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
+import { Authenticated, AuthLoading } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { ChatCanvas } from "../components/chat/ChatCanvas";
 import { ChatComposer } from "../components/chat/ChatComposer";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
 
 export default function ChatPage() {
+  return (
+    <Authenticated>
+      <ChatContent />
+    </Authenticated>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <main className="flex h-screen flex-col items-center justify-center bg-zinc-100">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-zinc-200 border-t-indigo-600"></div>
+        <p className="text-zinc-600">Loading your chats...</p>
+      </div>
+    </main>
+  );
+}
+
+function ChatContent() {
   const { user } = useUser();
   const [searchValue, setSearchValue] = useState("");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  // Fetch real conversations from Convex
+  // Initialize user in database on first load
+  const initializeUser = useMutation((api as any).messages.initializeUser);
+  
+  useEffect(() => {
+    initializeUser();
+  }, [initializeUser]);
+
+  // Fetch real conversations from Convex - only when authenticated
   const conversations = useQuery((api as any).messages.getConversations, {});
   const searchHistory = useQuery(api.searchHistory.getForCurrentUser, {});
 
