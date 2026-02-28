@@ -97,6 +97,7 @@ export const getConversations = query({
           lastMessage: conv.lastMessage,
           lastMessageAt: conv.lastMessageAt,
           otherUserId: conv.otherUserId,
+          lastSeenAt: otherUser?.lastSeenAt,
         };
       })
     );

@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // Get current user helper
@@ -52,5 +52,17 @@ export const listUsers = query({
     return (await ctx.db.query("users").collect()).filter(
       (user) => user._id !== currentUser._id
     );
+  },
+});
+
+export const updatePresence = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getCurrentUserHelper(ctx);
+    if (!currentUser) return;
+
+    await ctx.db.patch(currentUser._id, {
+      lastSeenAt: Date.now(),
+    });
   },
 });

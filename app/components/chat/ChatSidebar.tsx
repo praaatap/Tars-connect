@@ -5,6 +5,7 @@ type ChatItem = {
   active?: boolean;
   unreadCount?: number;
   conversationId?: string;
+  isOnline?: boolean;
 };
 
 type SearchHistoryItem = {
@@ -112,7 +113,12 @@ export function ChatSidebar({
                 }`}
             >
               <div className="flex items-start gap-2 flex-1">
-                <div className="mt-1 h-8 w-8 rounded-full bg-zinc-200" />
+                <div className="relative mt-1">
+                  <div className="h-8 w-8 rounded-full bg-zinc-200" />
+                  {chat.isOnline && (
+                    <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-900 truncate">{chat.name}</p>
                   <p className="text-xs text-zinc-500 truncate">{chat.message}</p>

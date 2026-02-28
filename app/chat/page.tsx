@@ -62,6 +62,16 @@ function ChatContent() {
   const addSearchHistory = useMutation(api.searchHistory.addForCurrentUser);
   const sendMessage = useMutation((api as any).messages.sendMessage);
   const getOrCreateConversation = useMutation((api as any).messages.getOrCreateConversation);
+  const updatePresence = useMutation((api as any).users.updatePresence);
+
+  // Presence heartbeat
+  useEffect(() => {
+    updatePresence();
+    const interval = setInterval(() => {
+      updatePresence();
+    }, 15000); // Every 15 seconds
+    return () => clearInterval(interval);
+  }, [updatePresence]);
 
   const handleSearchSubmit = async () => {
     const normalized = searchValue.trim();
@@ -100,11 +110,14 @@ function ChatContent() {
     time: "",
     conversationId: u._id, // Using userId as ID for mapping
     isUser: true,
+    isOnline: u.lastSeenAt ? (Date.now() - u.lastSeenAt) < 60000 : false,
   }));
 
   // Convert conversations to sidebar format
   const chatItems = (conversations ?? []).map((conv: any) => {
     const timeAgo = formatMessageTimestamp(conv.lastMessageAt);
+    const isOnline = conv.lastSeenAt ? (Date.now() - conv.lastSeenAt) < 60000 : false;
+
     return {
       name: conv.name,
       message: conv.lastMessage || "No messages yet",
@@ -112,6 +125,7 @@ function ChatContent() {
       active: selectedConversationId === conv._id,
       conversationId: conv._id,
       isUser: false,
+      isOnline,
     };
   });
 
