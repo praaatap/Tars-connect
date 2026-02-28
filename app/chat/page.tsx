@@ -43,9 +43,15 @@ function ChatContent() {
     initializeUser();
   }, [initializeUser]);
 
-  // Fetch real conversations from Convex - only when authenticated
+  // Fetch real conversations from Convex
   const conversations = useQuery((api as any).messages.getConversations, {});
   const searchHistory = useQuery(api.searchHistory.getForCurrentUser, {});
+
+  // Real-time user search
+  const userSearchResults = useQuery(
+    searchValue.trim() !== "" ? (api as any).users.searchUsers : "skip",
+    searchValue.trim() !== "" ? { query: searchValue } : "skip"
+  );
 
   // Fetch messages for selected conversation
   const messages = useQuery(
@@ -55,12 +61,11 @@ function ChatContent() {
 
   const addSearchHistory = useMutation(api.searchHistory.addForCurrentUser);
   const sendMessage = useMutation((api as any).messages.sendMessage);
+  const getOrCreateConversation = useMutation((api as any).messages.getOrCreateConversation);
 
   const handleSearchSubmit = async () => {
     const normalized = searchValue.trim();
-    if (!normalized) {
-      return;
-    }
+    if (!normalized) return;
     await addSearchHistory({ query: normalized });
   };
 
@@ -71,17 +76,31 @@ function ChatContent() {
 
   const handleSelectChat = (conversationId: string) => {
     setSelectedConversationId(conversationId);
+    setSearchValue(""); // Clear search when selecting a chat
+  };
+
+  const handleSelectUser = async (userId: string) => {
+    const conversationId = await getOrCreateConversation({ otherUserId: userId as any });
+    setSelectedConversationId(conversationId);
+    setSearchValue(""); // Clear search
   };
 
   const handleSendMessage = async (messageBody: string) => {
-    if (!selectedConversationId || !messageBody.trim()) {
-      return;
-    }
+    if (!selectedConversationId || !messageBody.trim()) return;
     await sendMessage({
       conversationId: selectedConversationId as any,
       body: messageBody,
     });
   };
+
+  // Convert search results to sidebar format
+  const searchItems = (userSearchResults ?? []).map((u: any) => ({
+    name: u.name || "User",
+    message: u.email || "",
+    time: "",
+    conversationId: u._id, // Using userId as ID for mapping
+    isUser: true,
+  }));
 
   // Convert conversations to sidebar format
   const chatItems = (conversations ?? []).map((conv: any) => {
@@ -92,8 +111,11 @@ function ChatContent() {
       time: timeAgo,
       active: selectedConversationId === conv._id,
       conversationId: conv._id,
+      isUser: false,
     };
   });
+
+  const displayItems = searchValue.trim() !== "" ? searchItems : chatItems;
 
   return (
     <main className="flex h-screen flex-col bg-zinc-100">
@@ -111,15 +133,22 @@ function ChatContent() {
         <ChatSidebar
           userName={user?.firstName || "User"}
           userStatus="Online"
-          sectionTitle="MESSAGES"
+          sectionTitle={searchValue.trim() !== "" ? "SEARCH RESULTS" : "MESSAGES"}
           searchPlaceholder="Search people..."
-          chats={chatItems}
+          chats={displayItems as any}
           searchValue={searchValue}
           onSearchChange={setSearchValue}
           onSearchSubmit={handleSearchSubmit}
           searchHistory={searchHistory ?? []}
           onHistorySelect={handleHistorySelect}
-          onChatSelect={handleSelectChat}
+          onChatSelect={(id) => {
+            const item = displayItems.find((i: any) => i.conversationId === id);
+            if (item?.isUser) {
+              handleSelectUser(id);
+            } else {
+              handleSelectChat(id);
+            }
+          }}
         />
         <div className="flex min-h-0 flex-1 flex-col">
           {selectedConversationId && messages ? (

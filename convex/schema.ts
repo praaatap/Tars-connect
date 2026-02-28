@@ -8,7 +8,11 @@ export default defineSchema({
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     lastSeenAt: v.number(),
-  }).index("by_tokenIdentifier", ["tokenIdentifier"]),
+  })
+    .index("by_tokenIdentifier", ["tokenIdentifier"])
+    .searchIndex("search_name", {
+      searchField: "name",
+    }),
 
   userSearchHistory: defineTable({
     userId: v.id("users"),
