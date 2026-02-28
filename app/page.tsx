@@ -4,6 +4,8 @@ import Link from "next/link";
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
 import Image from "next/image";
+import { useRouter } from "next/router";
+import RedirectToChat from "./components/RedirectToChat";
 
 export default function Home() {
   return (
@@ -49,7 +51,7 @@ export default function Home() {
       <section className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
           <AuthLoading>
-            <p className="text-center text-sm text-zinc-500">Loading auth...</p>
+            <RedirectToChat />
           </AuthLoading>
 
           <Unauthenticated>

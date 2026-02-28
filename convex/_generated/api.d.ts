@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as messages from "../messages.js";
 import type * as searchHistory from "../searchHistory.js";
 import type * as users from "../users.js";
 
@@ -18,6 +19,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  messages: typeof messages;
   searchHistory: typeof searchHistory;
   users: typeof users;
 }>;
