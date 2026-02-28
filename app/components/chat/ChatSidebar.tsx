@@ -33,6 +33,10 @@ type ChatSidebarProps = {
   onCreateGroup?: () => void;
   suggestedUsers?: any[];
   onUserSelect?: (userId: string) => void;
+  onSendChatInvite?: (userId: string) => void;
+  pendingChatInvites?: any[];
+  onAcceptChatInvite?: (inviteId: string) => void;
+  onRejectChatInvite?: (inviteId: string) => void;
   onOpenSettings?: () => void;
 };
 
@@ -52,6 +56,10 @@ export function ChatSidebar({
   onCreateGroup,
   suggestedUsers,
   onUserSelect,
+  onSendChatInvite,
+  pendingChatInvites,
+  onAcceptChatInvite,
+  onRejectChatInvite,
   onOpenSettings,
 }: ChatSidebarProps) {
   return (
@@ -139,7 +147,7 @@ export function ChatSidebar({
         aria-labelledby="conversations-heading"
       >
         {chats.length === 0 ? (
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col">
             <p className="px-2 py-8 text-center text-sm text-zinc-400">
               {searchValue.trim() !== "" ? "No people found" : "No conversations yet"}
             </p>
@@ -201,10 +209,9 @@ export function ChatSidebar({
             </p>
             <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2 snap-x">
               {suggestedUsers.map((user) => (
-                <button
+                <div
                   key={user._id}
-                  onClick={() => onUserSelect?.(user._id)}
-                  className="flex flex-col items-center gap-2 shrink-0 w-24 p-3 rounded-2xl bg-zinc-50 border border-zinc-100 hover:border-indigo-200 transition-all cursor-pointer snap-start hover:shadow-sm"
+                  className="flex flex-col items-center gap-2 shrink-0 w-24 p-3 rounded-2xl bg-zinc-50 border border-zinc-100 hover:border-indigo-200 transition-all snap-start hover:shadow-sm"
                 >
                   <div className="relative">
                     {user.imageUrl ? (
@@ -220,14 +227,98 @@ export function ChatSidebar({
                   </div>
                   <div className="text-center min-w-0 w-full px-1">
                     <p className="text-[11px] font-bold text-zinc-900 truncate w-full">{user.name || "User"}</p>
-                    <p className="text-[9px] text-zinc-400 font-medium truncate uppercase tracking-tighter">New User</p>
+                    <p className="text-[9px] text-zinc-400 font-medium truncate uppercase tracking-tighter">
+                      {user.isInConversation ? "In chat" : "New user"}
+                    </p>
                   </div>
-                  <div className="mt-1 h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-100">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-                    </svg>
+                  {user.isInConversation ? (
+                    <div className="mt-1 px-2 py-1 rounded-full bg-zinc-200 flex items-center gap-1">
+                      <svg className="w-3 h-3 text-zinc-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                      </svg>
+                    </div>
+                  ) : user.hasPendingInvite ? (
+                    <div className="mt-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 flex items-center gap-1">
+                      <svg className="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wider">Sent</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => onSendChatInvite?.(user._id)}
+                      className="mt-1 h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-100 hover:bg-indigo-700 transition-colors cursor-pointer active:scale-95"
+                      title="Send chat request"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Incoming Chat Requests */}
+        {pendingChatInvites && pendingChatInvites.length > 0 && !searchValue.trim() && (
+          <div className="mt-4 border-t border-zinc-100 pt-4 px-2">
+            <p className="pb-3 text-[11px] font-black tracking-widest text-zinc-400 uppercase flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+              Chat Requests
+            </p>
+            <div className="space-y-2">
+              {pendingChatInvites.map((invite: any) => (
+                <div
+                  key={invite._id}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-indigo-100 bg-indigo-50/40 transition-all hover:bg-indigo-50/70"
+                >
+                  <div className="relative shrink-0">
+                    {invite.fromUserImage ? (
+                      <img
+                        src={invite.fromUserImage}
+                        alt={invite.fromUserName}
+                        className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm border border-white shadow-sm">
+                        {(invite.fromUserName || "U")[0].toUpperCase()}
+                      </div>
+                    )}
+                    {invite.fromUserOnline && (
+                      <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+                    )}
                   </div>
-                </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-zinc-900 truncate">{invite.fromUserName}</p>
+                    {invite.message ? (
+                      <p className="text-[10px] text-zinc-500 truncate italic">"{invite.message}"</p>
+                    ) : (
+                      <p className="text-[10px] text-zinc-500">wants to chat</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => onAcceptChatInvite?.(invite._id)}
+                      className="h-7 w-7 rounded-full bg-indigo-600 flex items-center justify-center text-white hover:bg-indigo-700 transition-colors cursor-pointer active:scale-95 shadow-sm"
+                      title="Accept"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onRejectChatInvite?.(invite._id)}
+                      className="h-7 w-7 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors cursor-pointer active:scale-95"
+                      title="Decline"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           </div>

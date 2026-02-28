@@ -70,15 +70,26 @@ export const createGroup = mutation({
     const currentUser = await initializeOrUpdateUser(ctx);
     const now = Date.now();
 
-    // Include current user in participants
-    const participants = Array.from(new Set([...args.participantIds, currentUser._id]));
-
+    // Only the creator is added initially — others get invites
     const conversationId = await ctx.db.insert("conversations", {
-      participants,
+      participants: [currentUser._id],
       isGroup: true,
       name: args.name,
       lastMessageAt: now,
     });
+
+    // Send invites to selected participants
+    for (const userId of args.participantIds) {
+      if (userId === currentUser._id) continue;
+
+      await ctx.db.insert("groupChatInvites", {
+        conversationId,
+        invitedUserId: userId,
+        invitedByUserId: currentUser._id,
+        status: "pending",
+        createdAt: now,
+      });
+    }
 
     return conversationId;
   },
@@ -95,13 +106,18 @@ export const getConversations = query({
       .query("conversations")
       .collect();
 
+    // Include all conversations where current user is a participant (including empty DMs)
     const userConversations = conversations.filter((c: any) =>
       c.participants.map((p: any) => p.toString()).includes(currentUser._id.toString()) &&
-      !(c.hiddenBy || []).map((h: any) => h.toString()).includes(currentUser._id.toString()) &&
-      (c.isGroup || c.lastMessage) // Don't show empty DMs
+      !(c.hiddenBy || []).map((h: any) => h.toString()).includes(currentUser._id.toString())
     );
 
-    const sorted = userConversations.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+    // Sort by most recent message, showing new conversations at the bottom
+    const sorted = userConversations.sort((a, b) => {
+      const aTime = a.lastMessageAt || 0;
+      const bTime = b.lastMessageAt || 0;
+      return bTime - aTime;
+    });
 
     const withUserInfo = await Promise.all(
       sorted.map(async (conv: any) => {
@@ -162,6 +178,57 @@ export const getConversations = query({
     );
 
     return withUserInfo;
+  },
+});
+
+// Get a single conversation by ID with fresh online status
+export const getConversationById = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) return null;
+
+    const conv = await ctx.db.get(args.conversationId);
+    if (!conv) return null;
+
+    // Check if current user is in this conversation
+    if (!conv.participants.some((p: any) => p.toString() === currentUser._id.toString())) {
+      return null;
+    }
+
+    let name = conv.name;
+    let imageUrl = undefined;
+    let otherUserId = undefined;
+
+    if (!conv.isGroup) {
+      otherUserId = conv.participants.find((id: any) => id.toString() !== currentUser._id.toString());
+      if (otherUserId) {
+        const otherUser: any = await ctx.db.get(otherUserId);
+        name = otherUser?.name || "User";
+        imageUrl = otherUser?.imageUrl;
+      }
+    }
+
+    // Determine online status with fresh data
+    let isOnline = false;
+    if (!conv.isGroup && otherUserId) {
+      const otherUser: any = await ctx.db.get(otherUserId);
+      if (otherUser?.lastSeenAt) {
+        isOnline = (Date.now() - otherUser.lastSeenAt) < 60000;
+      }
+    }
+
+    return {
+      _id: conv._id,
+      name: name || "Group",
+      imageUrl,
+      lastMessage: conv.lastMessage,
+      lastMessageAt: conv.lastMessageAt,
+      otherUserId,
+      isGroup: !!conv.isGroup,
+      isOnline,
+      memberCount: conv.participants.length,
+    };
   },
 });
 
@@ -408,28 +475,48 @@ export const getSuggestedUsers = query({
   args: {},
   handler: async (ctx) => {
     const currentUser = await getCurrentUser(ctx);
-    if (!currentUser) return [];
+    if (!currentUser) {
+      console.log("No current user found");
+      return [];
+    }
 
-    // Get all conversations for current user to exclude existing contacts
+    const currentUserIdStr = currentUser._id.toString();
+    console.log("Current user ID:", currentUserIdStr);
+
+    // Get all conversations for current user to check if already chatting
     const conversations = await ctx.db
       .query("conversations")
       .collect();
 
-    const existingParticipantIds = new Set(
-      conversations
-        .filter((c: any) => c.participants.includes(currentUser._id))
-        .flatMap((c: any) => c.participants.map((id: any) => id.toString()))
+    const userConversations = conversations.filter((c: any) =>
+      c.participants.some((p: any) => p.toString() === currentUserIdStr)
     );
 
-    const users = await ctx.db.query("users").collect();
-
-    // Filter out: current user AND people who already have a conversation
-    return users
-      .filter((u: any) =>
-        u._id.toString() !== currentUser._id.toString() &&
-        !existingParticipantIds.has(u._id.toString())
+    const existingParticipantIds = new Set(
+      userConversations.flatMap((c: any) =>
+        c.participants.map((id: any) => id.toString())
       )
-      .slice(0, 5); // Limit to 5 suggestions
+    );
+
+    const allUsers = await ctx.db.query("users").collect();
+    console.log("Total users in DB:", allUsers.length);
+
+    // Show all users except current user, mark if already in conversation
+    const suggestedUsers = allUsers
+      .filter((u: any) => u._id.toString() !== currentUserIdStr)
+      .slice(0, 10)
+      .map((u: any) => {
+        const userIdStr = u._id.toString();
+        const isInConversation = existingParticipantIds.has(userIdStr);
+        return {
+          ...u,
+          isInConversation,
+          hasPendingInvite: false,
+        };
+      });
+
+    console.log("Final suggested users:", suggestedUsers.length);
+    return suggestedUsers;
   },
 });
 
@@ -616,5 +703,159 @@ export const getGroupMembers = query({
         };
       })
     );
+  },
+});
+
+// ======= CHAT INVITE REQUEST (DM) =======
+
+// Send a chat invite request to another user
+export const sendChatInvite = mutation({
+  args: {
+    toUserId: v.id("users"),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+
+    if (args.toUserId === currentUser._id) {
+      throw new Error("Cannot send invite to yourself");
+    }
+
+    // Check if a conversation already exists between these users
+    const conversations = await ctx.db.query("conversations").collect();
+    const existingConv = conversations.find((conv: any) => {
+      const p = conv.participants.map((id: any) => id.toString()).sort();
+      const target = [currentUser._id.toString(), args.toUserId.toString()].sort();
+      return p.length === 2 && p[0] === target[0] && p[1] === target[1];
+    });
+
+    if (existingConv) {
+      throw new Error("Conversation already exists");
+    }
+
+    // Check if a pending invite already exists (in either direction)
+    const existingInvites = await ctx.db.query("chatInvites").collect();
+    const hasPending = existingInvites.some((inv: any) =>
+      inv.status === "pending" && (
+        (inv.fromUserId === currentUser._id && inv.toUserId === args.toUserId) ||
+        (inv.fromUserId === args.toUserId && inv.toUserId === currentUser._id)
+      )
+    );
+
+    if (hasPending) {
+      throw new Error("A pending invite already exists");
+    }
+
+    return await ctx.db.insert("chatInvites", {
+      fromUserId: currentUser._id,
+      toUserId: args.toUserId,
+      status: "pending",
+      message: args.message,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+// Get pending chat invites for the current user
+export const getPendingChatInvites = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getCurrentUser(ctx);
+    if (!currentUser) return [];
+
+    const invites = await ctx.db
+      .query("chatInvites")
+      .withIndex("by_to_user_status", (q: any) =>
+        q.eq("toUserId", currentUser._id).eq("status", "pending")
+      )
+      .collect();
+
+    return Promise.all(
+      invites.map(async (invite: any) => {
+        const fromUser: any = await ctx.db.get(invite.fromUserId);
+        return {
+          _id: invite._id,
+          fromUserId: invite.fromUserId,
+          fromUserName: fromUser?.name || "User",
+          fromUserImage: fromUser?.imageUrl,
+          fromUserOnline: fromUser?.lastSeenAt ? (Date.now() - fromUser.lastSeenAt) < 60000 : false,
+          message: invite.message,
+          status: invite.status,
+          createdAt: invite.createdAt,
+        };
+      })
+    );
+  },
+});
+
+// Accept a chat invite — creates the DM conversation
+export const acceptChatInvite = mutation({
+  args: {
+    inviteId: v.id("chatInvites"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const invite = await ctx.db.get(args.inviteId);
+
+    if (!invite || invite.toUserId !== currentUser._id) {
+      throw new Error("Invite not found or not for this user");
+    }
+
+    if (invite.status !== "pending") {
+      throw new Error("Invite already responded to");
+    }
+
+    // Create the DM conversation
+    const participants = [currentUser._id, invite.fromUserId].sort();
+
+    // Check if conversation already exists (edge case)
+    const conversations = await ctx.db.query("conversations").collect();
+    const existing = conversations.find((conv: any) => {
+      const p = conv.participants.sort();
+      return p.length === 2 && p[0] === participants[0] && p[1] === participants[1];
+    });
+
+    let conversationId;
+    if (existing) {
+      conversationId = existing._id;
+    } else {
+      conversationId = await ctx.db.insert("conversations", {
+        participants,
+        lastMessageAt: Date.now(),
+        lastMessage: undefined,
+      });
+    }
+
+    // Mark invite as accepted
+    await ctx.db.patch(args.inviteId, {
+      status: "accepted",
+      respondedAt: Date.now(),
+    });
+
+    return conversationId;
+  },
+});
+
+// Reject a chat invite
+export const rejectChatInvite = mutation({
+  args: {
+    inviteId: v.id("chatInvites"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const invite = await ctx.db.get(args.inviteId);
+
+    if (!invite || invite.toUserId !== currentUser._id) {
+      throw new Error("Invite not found or not for this user");
+    }
+
+    if (invite.status !== "pending") {
+      throw new Error("Invite already responded to");
+    }
+
+    await ctx.db.patch(args.inviteId, {
+      status: "rejected",
+      respondedAt: Date.now(),
+    });
   },
 });

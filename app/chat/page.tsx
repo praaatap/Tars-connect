@@ -12,6 +12,7 @@ import { ChatRightSidebar } from "../components/chat/ChatRightSidebar";
 import { ChatWindow } from "../components/chat/ChatWindow";
 import { ChatSkeleton } from "../components/chat/ChatSkeleton";
 import { GroupInvitesPanel } from "../components/chat/GroupInvitesPanel";
+import { ChatInvitesPanel } from "../components/chat/ChatInvitesPanel";
 import { GroupMembersModal } from "../components/chat/GroupMembersModal";
 import { GroupCreateModal } from "../components/chat/GroupCreateModal";
 import { SettingsModal } from "../components/chat/SettingsModal";
@@ -36,6 +37,9 @@ function ChatContent() {
   const { user } = useUser();
   const [searchValue, setSearchValue] = useState("");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isLargeScreen, setIsLargeScreen] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+  const [isExtraLargeScreen, setIsExtraLargeScreen] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1280 : false);
+  
   const {
     sidebarWidth,
     setSidebarWidth,
@@ -45,6 +49,17 @@ function ChatContent() {
     setIsSettingsOpen
   } = useUIStore();
   const isResizing = useRef(false);
+
+  // Track window resize for responsive layout updates
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLargeScreen(window.innerWidth >= 1024);
+      setIsExtraLargeScreen(window.innerWidth >= 1280);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Apply scaling
   useEffect(() => {
@@ -87,6 +102,9 @@ function ChatContent() {
   const acceptGroupInvite = useMutation((api as any).messages.acceptGroupInvite);
   const rejectGroupInvite = useMutation((api as any).messages.rejectGroupInvite);
   const sendGroupInvite = useMutation((api as any).messages.sendGroupInvite);
+  const sendChatInvite = useMutation((api as any).messages.sendChatInvite);
+  const acceptChatInvite = useMutation((api as any).messages.acceptChatInvite);
+  const rejectChatInvite = useMutation((api as any).messages.rejectChatInvite);
 
   useEffect(() => {
     initializeUser();
@@ -99,6 +117,7 @@ function ChatContent() {
   const pendingInvites = useQuery((api as any).messages.getPendingInvites, {});
   const suggestedUsers = useQuery((api as any).messages.getSuggestedUsers, {});
   const allUsers = useQuery(api.users.listUsers, {});
+  const pendingChatInvites = useQuery((api as any).messages.getPendingChatInvites, {});
 
   const userSearchResults = useQuery(
     searchValue.trim() !== "" ? (api as any).users.searchUsers : "skip",
@@ -107,6 +126,12 @@ function ChatContent() {
 
   const messages = useQuery(
     selectedConversationId ? (api as any).messages.getMessagesForConversation : "skip",
+    selectedConversationId ? { conversationId: selectedConversationId as any } : "skip"
+  );
+
+  // Get fresh conversation data with current online status
+  const selectedConversationData = useQuery(
+    selectedConversationId ? (api as any).messages.getConversationById : "skip",
     selectedConversationId ? { conversationId: selectedConversationId as any } : "skip"
   );
 
@@ -184,6 +209,14 @@ function ChatContent() {
     await sendGroupInvite({ conversationId: selectedConversationId as any, invitedUserIds: userIds as any, message });
   };
 
+  const handleSendChatInvite = async (userId: string) => {
+    try {
+      await sendChatInvite({ toUserId: userId as any });
+    } catch (err) {
+      console.error("Failed to send chat invite:", err);
+    }
+  };
+
   // UI Mapping
   const searchItems = (userSearchResults ?? []).map((u: any) => ({
     name: u.name || "User",
@@ -218,12 +251,17 @@ function ChatContent() {
       <div className="flex min-h-0 flex-1 relative overflow-hidden">
         <div
           className={`lg:flex shrink-0 flex-col border-r border-zinc-200 bg-white group/sidebar relative ${selectedConversationId ? 'hidden' : 'flex w-full'}`}
-          style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${sidebarWidth}px` : undefined }}
+          style={{ width: isLargeScreen ? `${sidebarWidth}px` : undefined }}
         >
           <GroupInvitesPanel
             invites={pendingInvites ?? []}
             onAccept={async (id) => setSelectedConversationId(await acceptGroupInvite({ inviteId: id as any }))}
             onReject={(id) => rejectGroupInvite({ inviteId: id as any })}
+          />
+          <ChatInvitesPanel
+            invites={pendingChatInvites ?? []}
+            onAccept={async (id) => setSelectedConversationId(await acceptChatInvite({ inviteId: id as any }))}
+            onReject={(id) => rejectChatInvite({ inviteId: id as any })}
           />
           <ChatSidebar
             userName={(currentUser?.name || user?.firstName || "User").split(',')[0].trim()}
@@ -244,6 +282,10 @@ function ChatContent() {
             onCreateGroup={() => setIsGroupModalOpen(true)}
             suggestedUsers={suggestedUsers}
             onUserSelect={handleSelectUser}
+            onSendChatInvite={handleSendChatInvite}
+            pendingChatInvites={pendingChatInvites}
+            onAcceptChatInvite={async (id) => setSelectedConversationId(await acceptChatInvite({ inviteId: id as any }))}
+            onRejectChatInvite={(id) => rejectChatInvite({ inviteId: id as any })}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
           <div onMouseDown={startResizing} className="absolute -right-1 top-0 bottom-0 w-2 cursor-col-resize z-50 hover:bg-indigo-500/20 active:bg-indigo-500/40 transition-colors hidden lg:block" />
@@ -275,9 +317,9 @@ function ChatContent() {
           )}
         </div>
 
-        <div className="hidden xl:block">
+        {isExtraLargeScreen && (
           <ChatRightSidebar onChatSelect={handleSelectChat} />
-        </div>
+        )}
       </div>
 
       <GroupCreateModal

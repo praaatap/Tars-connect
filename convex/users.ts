@@ -43,6 +43,13 @@ export const searchUsers = query({
   },
 });
 
+export const getAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const allUsers = await ctx.db.query("users").collect();
+    return allUsers;
+  },
+});
 export const listUsers = query({
   args: {},
   handler: async (ctx) => {

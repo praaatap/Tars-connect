@@ -6,6 +6,8 @@ import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { AISuggestionsModal } from "./AISuggestionsModal";
 import { formatMessageTimestamp } from "../../lib/utils";
+import {useToneStore} from '@/app/store/useTone'; 
+
 
 interface ChatWindowProps {
     messages: any[];
@@ -44,6 +46,9 @@ export function ChatWindow({
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
     const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
     const [isAiLoading, setIsAiLoading] = useState(false);
+
+    const tone = useToneStore(state => state.tone);
+    const setTone = useToneStore(state => state.setTone);
 
     const setTyping = useMutation((api as any).messages.setTyping);
     const clearTyping = useMutation((api as any).messages.clearTyping);
@@ -106,7 +111,8 @@ export function ChatWindow({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     context,
-                    userName: "the user"
+                    userName: "the user",
+                    tone: tone || "Friendly",
                 })
             });
 
@@ -389,7 +395,7 @@ export function ChatWindow({
                     <select
                         className="bg-white/50 border border-zinc-200 rounded-lg px-2 py-1 text-[10px] font-bold text-zinc-500 outline-none focus:border-indigo-500 transition-colors cursor-pointer"
                         onChange={(e) => {
-                            console.log("Setting Tone to:", e.target.value);
+                            setTone(e.target.value);
                         }}
                     >
                         <option value="Friendly">Friendly</option>
