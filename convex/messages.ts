@@ -121,32 +121,75 @@ export const getConversations = query({
   },
 });
 
+export const deleteMessage = mutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const message = await ctx.db.get(args.messageId);
+    if (!message || message.senderId !== currentUser._id) return;
+
+    await ctx.db.patch(args.messageId, { deleted: true });
+  },
+});
+
+export const toggleReaction = mutation({
+  args: {
+    messageId: v.id("messages"),
+    emoji: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const message = await ctx.db.get(args.messageId);
+    if (!message) return;
+
+    const reactions = message.reactions || {};
+    const userId = currentUser._id;
+
+    if (reactions[userId] === args.emoji) {
+      // Remove if same emoji
+      const { [userId]: _, ...rest } = reactions;
+      await ctx.db.patch(args.messageId, { reactions: rest });
+    } else {
+      // Set/update emoji
+      await ctx.db.patch(args.messageId, {
+        reactions: { ...reactions, [userId]: args.emoji }
+      });
+    }
+  },
+});
+
 // Get messages for a specific conversation
 export const getMessagesForConversation = query({
-  args: {
-    conversationId: v.id("conversations"),
-  },
+  args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_conversation_createdAt", (q: any) =>
-        q.eq("conversationId", args.conversationId)
-      )
+      .withIndex("by_conversation_createdAt", (q) => q.eq("conversationId", args.conversationId))
       .order("asc")
       .collect();
 
-    return await Promise.all(
-      messages.map(async (msg: any) => {
-        const sender: any = await ctx.db.get(msg.senderId);
+    return Promise.all(
+      messages.map(async (msg) => {
+        const sender = await ctx.db.get(msg.senderId);
+
+        // Calculate reaction counts
+        const reactionCounts: Record<string, number> = {};
+        if (msg.reactions) {
+          Object.values(msg.reactions).forEach(emoji => {
+            reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+          });
+        }
+
         return {
-          _id: msg._id,
-          body: msg.body,
-          createdAt: msg.createdAt,
+          ...msg,
+          body: msg.deleted ? "This message was deleted" : msg.body,
           sender: {
             _id: sender?._id,
             name: sender?.name || "User",
-            imageUrl: sender?.imageUrl,
+            imageUrl: sender?.imageUrl
           },
+          reactionCounts,
+          userReaction: msg.reactions?.[sender?._id || ""], // We need current user ID context usually, but we can handle this in UI
         };
       })
     );

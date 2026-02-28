@@ -235,6 +235,8 @@ function ChatWindow({
 
   const setTyping = useMutation((api as any).messages.setTyping);
   const clearTyping = useMutation((api as any).messages.clearTyping);
+  const deleteMessage = useMutation((api as any).messages.deleteMessage);
+  const toggleReaction = useMutation((api as any).messages.toggleReaction);
 
   const handleTyping = () => {
     if (!selectedConversation?._id) return;
@@ -336,30 +338,81 @@ function ChatWindow({
               return (
                 <div
                   key={msg._id}
-                  className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1`}
+                  className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1 group relative`}
                 >
                   {!isMine && (
                     <div className="mr-2 mt-auto shrink-0">
                       {msg.sender.imageUrl ? (
-                        <img src={msg.sender.imageUrl} alt={msg.sender.name} className="h-7 w-7 rounded-full object-cover" />
+                        <img src={msg.sender.imageUrl} alt={msg.sender.name} className="h-7 w-7 rounded-full object-cover shadow-sm" />
                       ) : (
                         <div className="h-7 w-7 rounded-full bg-indigo-200" />
                       )}
                     </div>
                   )}
-                  <div
-                    className={`max-w-[85%] lg:max-w-[70%] rounded-2xl px-3 py-1.5 shadow-sm relative ${isMine
+
+                  <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[85%] lg:max-w-[70%]`}>
+                    <div
+                      className={`rounded-2xl px-3 py-1.5 shadow-sm relative transition-all ${isMine
                         ? 'bg-indigo-600 text-white rounded-tr-none'
                         : 'bg-white text-zinc-800 rounded-tl-none'
-                      }`}
-                  >
-                    {!isMine && (
-                      <p className="text-[11px] font-bold text-indigo-600 mb-0.5">{msg.sender.name}</p>
-                    )}
-                    <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
-                    <div className={`text-[10px] mt-1 flex justify-end ${isMine ? 'text-white/70' : 'text-zinc-400'}`}>
-                      {formatMessageTimestamp(msg.createdAt)}
+                        }`}
+                    >
+                      {!isMine && msg.sender.name && (
+                        <p className="text-[11px] font-bold text-indigo-600 mb-0.5">{msg.sender.name}</p>
+                      )}
+
+                      <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-all ${msg.deleted ? 'italic text-opacity-70' : ''}`}>
+                        {msg.body}
+                      </p>
+
+                      <div className={`text-[10px] mt-1 flex justify-end gap-2 items-center ${isMine ? 'text-white/70' : 'text-zinc-400'}`}>
+                        {formatMessageTimestamp(msg.createdAt)}
+
+                        {/* Delete button for own messages */}
+                        {isMine && !msg.deleted && (
+                          <button
+                            onClick={() => deleteMessage({ messageId: msg._id })}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-white/50 hover:text-white"
+                            title="Delete message"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Reaction Picker Popover (Desktop) */}
+                      {!msg.deleted && (
+                        <div className={`absolute top-0 ${isMine ? 'right-full mr-2' : 'left-full ml-2'} opacity-0 group-hover:opacity-100 flex gap-1 bg-white shadow-lg rounded-full px-2 py-1 border border-zinc-100 z-20 transition-all scale-90 group-hover:scale-100`}>
+                          {['👍', '❤️', '😂', '😮', '😢'].map(emoji => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction({ messageId: msg._id, emoji })}
+                              className={`hover:scale-125 transition-transform p-0.5 ${msg.reactions?.[currentUserId || ''] === emoji ? 'bg-indigo-50 rounded-full' : ''}`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
+
+                    {/* Reactions Display */}
+                    {Object.keys(msg.reactionCounts || {}).length > 0 && (
+                      <div className={`flex gap-1 mt-[-6px] z-10 ${isMine ? 'mr-2' : 'ml-2'}`}>
+                        {Object.entries(msg.reactionCounts as Record<string, number>).map(([emoji, count]) => (
+                          <button
+                            key={emoji}
+                            onClick={() => toggleReaction({ messageId: msg._id, emoji })}
+                            className={`flex items-center gap-1 bg-white rounded-full px-1.5 py-0.5 border border-zinc-100 shadow-sm text-[11px] hover:bg-zinc-50 transition-colors ${msg.reactions?.[currentUserId || ''] === emoji ? 'border-indigo-200 bg-indigo-50' : ''}`}
+                          >
+                            <span>{emoji}</span>
+                            <span className="font-medium text-zinc-600">{count}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

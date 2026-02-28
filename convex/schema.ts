@@ -36,6 +36,8 @@ export default defineSchema({
     senderId: v.id("users"),
     body: v.string(),
     createdAt: v.number(),
+    deleted: v.optional(v.boolean()),
+    reactions: v.optional(v.record(v.string(), v.string())),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_conversation_createdAt", ["conversationId", "createdAt"]),
