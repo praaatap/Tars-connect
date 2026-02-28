@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
@@ -220,6 +220,10 @@ function ChatWindow({
   selectedConversation?: any;
 }) {
   const [input, setInput] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
   const setTyping = useMutation((api as any).messages.setTyping);
   const clearTyping = useMutation((api as any).messages.clearTyping);
 
@@ -234,6 +238,38 @@ function ChatWindow({
     setInput("");
     if (selectedConversation?._id) {
       clearTyping({ conversationId: selectedConversation._id });
+    }
+    // Force scroll to bottom after sending
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 100);
+  };
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setIsAtBottom(atBottom);
+    if (atBottom) setShowScrollButton(false);
+  };
+
+  useEffect(() => {
+    if (isAtBottom && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    } else if (messages.length > 0) {
+      setShowScrollButton(true);
+    }
+  }, [messages, isAtBottom]);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+      setShowScrollButton(false);
     }
   };
 
@@ -257,7 +293,11 @@ function ChatWindow({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-white p-6 space-y-4">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto bg-white p-6 space-y-4 relative"
+      >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
             <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">
@@ -291,6 +331,15 @@ function ChatWindow({
               </div>
             )}
           </>
+        )}
+
+        {showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-medium text-white shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+          >
+            ↓ New messages
+          </button>
         )}
       </div>
       <div className="border-t border-zinc-200 bg-white px-5 py-4 shrink-0">
