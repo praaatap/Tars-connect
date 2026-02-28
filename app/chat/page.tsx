@@ -63,6 +63,7 @@ function ChatContent() {
   const sendMessage = useMutation((api as any).messages.sendMessage);
   const getOrCreateConversation = useMutation((api as any).messages.getOrCreateConversation);
   const updatePresence = useMutation((api as any).users.updatePresence);
+  const markAsRead = useMutation((api as any).messages.markAsRead);
 
   // Presence heartbeat
   useEffect(() => {
@@ -72,6 +73,13 @@ function ChatContent() {
     }, 15000); // Every 15 seconds
     return () => clearInterval(interval);
   }, [updatePresence]);
+
+  // Mark as read when selecting or receiving messages
+  useEffect(() => {
+    if (selectedConversationId) {
+      markAsRead({ conversationId: selectedConversationId as any });
+    }
+  }, [selectedConversationId, messages, markAsRead]);
 
   const handleSearchSubmit = async () => {
     const normalized = searchValue.trim();
@@ -126,6 +134,7 @@ function ChatContent() {
       conversationId: conv._id,
       isUser: false,
       isOnline,
+      unreadCount: conv.unreadCount || 0,
     };
   });
 

@@ -89,6 +89,19 @@ export const getConversations = query({
     const withUserInfo = await Promise.all(
       userConversations.map(async (conv: any) => {
         const otherUser: any = await ctx.db.get(conv.otherUserId);
+
+        // Count unread messages
+        const lastReadAt = conv.lastReadAt?.[currentUser._id] || 0;
+        const unreadMessages = await ctx.db
+          .query("messages")
+          .withIndex("by_conversation_createdAt", (q: any) =>
+            q.eq("conversationId", conv._id).gt("createdAt", lastReadAt)
+          )
+          .collect();
+
+        // Filter out current user's own messages from unread count
+        const unreadCount = unreadMessages.filter((m: any) => m.senderId !== currentUser._id).length;
+
         return {
           _id: conv._id,
           name: otherUser?.name || "User",
@@ -99,6 +112,7 @@ export const getConversations = query({
           otherUserId: conv.otherUserId,
           lastSeenAt: otherUser?.lastSeenAt,
           isTyping: !!(conv.typing?.[conv.otherUserId] && (Date.now() - conv.typing[conv.otherUserId]) < 3000),
+          unreadCount,
         };
       })
     );
@@ -172,10 +186,33 @@ export const sendMessage = mutation({
       typing: {
         ...((await ctx.db.get(args.conversationId))?.typing || {}),
         [currentUser._id]: 0,
+      },
+      // Automatically mark as read for the sender
+      lastReadAt: {
+        ...((await ctx.db.get(args.conversationId))?.lastReadAt || {}),
+        [currentUser._id]: now,
       }
     });
 
     return messageId;
+  },
+});
+
+export const markAsRead = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await initializeOrUpdateUser(ctx);
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) return;
+
+    await ctx.db.patch(args.conversationId, {
+      lastReadAt: {
+        ...(conversation.lastReadAt || {}),
+        [currentUser._id]: Date.now(),
+      },
+    });
   },
 });
 
