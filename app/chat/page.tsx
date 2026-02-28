@@ -10,6 +10,7 @@ import { api } from "../../convex/_generated/api";
 import { ChatCanvas } from "../components/chat/ChatCanvas";
 import { ChatComposer } from "../components/chat/ChatComposer";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
+import { ChatRightSidebar } from "../components/chat/ChatRightSidebar";
 
 export default function ChatPage() {
   return (
@@ -37,7 +38,7 @@ function ChatContent() {
 
   // Initialize user in database on first load
   const initializeUser = useMutation((api as any).messages.initializeUser);
-  
+
   useEffect(() => {
     initializeUser();
   }, [initializeUser]);
@@ -138,6 +139,7 @@ function ChatContent() {
             </>
           )}
         </div>
+        <ChatRightSidebar onChatSelect={handleSelectChat} />
       </div>
     </main>
   );

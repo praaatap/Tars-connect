@@ -206,3 +206,20 @@ export const getOrCreateConversation = mutation({
     });
   },
 });
+
+export const getSuggestedUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [];
+    }
+
+    const currentUser = await getCurrentUser(ctx);
+    const users = await ctx.db.query("users").collect();
+
+    if (!currentUser) return users;
+
+    return users.filter((u: any) => u._id !== currentUser._id).slice(0, 10);
+  },
+});
