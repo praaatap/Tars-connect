@@ -229,12 +229,13 @@ function ChatContent() {
     }
   };
 
-  const handleSendGroupInvites = async (userIds: string[]) => {
+  const handleSendGroupInvites = async (userIds: string[], message?: string) => {
     if (!selectedConversationId) return;
     try {
       await sendGroupInvite({
         conversationId: selectedConversationId as any,
         invitedUserIds: userIds as any,
+        message,
       });
     } catch (err) {
       console.error("Failed to send invites:", err);
@@ -607,7 +608,7 @@ function ChatWindow({
 
       const data = await res.json();
       console.log("API response data:", data);
-      
+
       if (data.error) {
         console.error("AI error:", data.error);
         setAiSuggestions([]);
@@ -900,6 +901,7 @@ function ChatWindow({
           >
             <span className="text-lg group-hover:scale-110 transition-transform">✨</span>
           </button>
+
           <input
             className="flex-1 bg-transparent text-[14px] text-zinc-700 outline-none"
             placeholder="Type a message..."

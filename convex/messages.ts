@@ -438,6 +438,7 @@ export const sendGroupInvite = mutation({
   args: {
     conversationId: v.id("conversations"),
     invitedUserIds: v.array(v.id("users")),
+    message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const currentUser = await initializeOrUpdateUser(ctx);
@@ -473,6 +474,7 @@ export const sendGroupInvite = mutation({
           invitedUserId: userId,
           invitedByUserId: currentUser._id,
           status: "pending",
+          message: args.message,
           createdAt: now,
         });
         inviteIds.push(inviteId);
@@ -522,6 +524,7 @@ export const getPendingInvites = query({
           invitedBy: invitedBy?.name || "User",
           invitedByImage: invitedBy?.imageUrl,
           otherInvitedUsers: otherInvitedDetails,
+          message: invite.message,
           status: invite.status,
           createdAt: invite.createdAt,
         };

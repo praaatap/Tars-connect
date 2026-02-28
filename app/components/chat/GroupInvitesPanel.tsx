@@ -10,6 +10,7 @@ type GroupInvite = {
   status: "pending" | "accepted" | "rejected";
   createdAt: number;
   otherInvitedUsers?: string[];
+  message?: string;
 };
 
 type GroupInvitesPanelProps = {
@@ -89,6 +90,12 @@ export function GroupInvitesPanel({
                         <p className="text-[9px] text-zinc-400 font-medium">
                           {invite.otherInvitedUsers.join(", ")} also invited
                         </p>
+                      </div>
+                    )}
+                    {invite.message && (
+                      <div className="mt-3 p-2.5 bg-white border border-indigo-50 rounded-lg shadow-sm">
+                        <p className="text-[10px] uppercase font-black text-indigo-500 tracking-wider mb-1">Message:</p>
+                        <p className="text-xs text-zinc-600 italic leading-relaxed">"{invite.message}"</p>
                       </div>
                     )}
                   </div>

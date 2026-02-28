@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     try {
-        const { context, userName } = await req.json();
+        const { context, userName  } = await req.json();
 
         if (!context || context.trim() === "") {
             console.log("Empty context provided to AI suggestion API");
@@ -34,7 +34,6 @@ Conversation History:
 
 SYSTEM : Generate 3 short reply suggestions (max 40 words each).
 Format: suggestion1 | suggestion2 | suggestion3
-
 IMPORTANT: Only output the suggestions separated by |. Nothing else.`
         );
 
@@ -42,6 +41,7 @@ IMPORTANT: Only output the suggestions separated by |. Nothing else.`
         const result = await chain.invoke({
             context: context.substring(0, 2000), // Limit context to avoid token issues
             userName,
+            
         });
 
         const responseText = result.content.toString().trim();
@@ -93,5 +93,3 @@ IMPORTANT: Only output the suggestions separated by |. Nothing else.`
         );
     }
 }
-
-

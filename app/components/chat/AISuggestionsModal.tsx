@@ -16,7 +16,7 @@ export function AISuggestionsModal({
     hasMessages = true,
 }: AISuggestionsModalProps) {
     if (!isOpen) return null;
-
+    const Tones = ['Casual', 'Formal', 'Friendly', 'Professional', 'Humorous', 'Polite', 'Enthusiastic', 'Sarcastic', 'Witty', 'Playful'];
     return (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">

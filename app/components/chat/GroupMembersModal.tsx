@@ -13,7 +13,7 @@ type GroupMembersModalProps = {
   currentMembers: User[];
   allUsers: User[];
   onClose: () => void;
-  onInvite: (userIds: string[]) => void;
+  onInvite: (userIds: string[], message?: string) => void;
   isLoading?: boolean;
 };
 
@@ -27,6 +27,7 @@ export function GroupMembersModal({
   isLoading = false,
 }: GroupMembersModalProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [inviteMessage, setInviteMessage] = useState("");
 
   if (!isOpen) return null;
 
@@ -35,8 +36,9 @@ export function GroupMembersModal({
 
   const handleInvite = async () => {
     if (selectedUsers.length === 0) return;
-    await onInvite(selectedUsers);
+    await onInvite(selectedUsers, inviteMessage.trim() || undefined);
     setSelectedUsers([]);
+    setInviteMessage("");
     onClose();
   };
 
@@ -127,6 +129,17 @@ export function GroupMembersModal({
                 ))}
               </div>
             )}
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-zinc-400 tracking-wider block mb-1.5 uppercase">
+              Add a Personal Note (Optional)
+            </label>
+            <textarea
+              className="w-full border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-colors resize-none h-24 text-black"
+              placeholder="Tell them why they should join... (e.g. 'Hey, joining our tech discussion group!')"
+              value={inviteMessage}
+              onChange={(e) => setInviteMessage(e.target.value)}
+            />
           </div>
         </div>
 
