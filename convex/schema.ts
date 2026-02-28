@@ -1,0 +1,36 @@
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  users: defineTable({
+    tokenIdentifier: v.string(),
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    lastSeenAt: v.number(),
+  }).index("by_tokenIdentifier", ["tokenIdentifier"]),
+
+  userSearchHistory: defineTable({
+    userId: v.id("users"),
+    query: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_user_createdAt", ["userId", "createdAt"])
+    .index("by_user_query", ["userId", "query"]),
+
+  conversations: defineTable({
+    participants: v.array(v.id("users")),
+    lastMessageAt: v.number(),
+    lastMessage: v.optional(v.string()),
+    lastMessageSenderId: v.optional(v.id("users")),
+  }).index("by_participants", ["participants"]),
+
+  messages: defineTable({
+    conversationId: v.id("conversations"),
+    senderId: v.id("users"),
+    body: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_conversation", ["conversationId"])
+    .index("by_conversation_createdAt", ["conversationId", "createdAt"]),
+});

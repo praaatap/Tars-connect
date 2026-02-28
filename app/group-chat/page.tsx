@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { UserButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { ChatCanvas } from "../components/chat/ChatCanvas";
 import { ChatComposer } from "../components/chat/ChatComposer";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
@@ -20,6 +22,9 @@ const groups = [
 ];
 
 export default function GroupChatPage() {
+  const { user } = useUser();
+  const [searchValue, setSearchValue] = useState("");
+
   return (
     <main className="flex h-screen flex-col bg-zinc-100">
       <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3">
@@ -34,11 +39,17 @@ export default function GroupChatPage() {
 
       <div className="flex min-h-0 flex-1">
         <ChatSidebar
-          userName="Alex Tars"
+          userName={user?.firstName || "User"}
           userStatus="Online"
           sectionTitle="GROUPS"
           searchPlaceholder="Search groups..."
           chats={groups}
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          onSearchSubmit={() => {}}
+          searchHistory={[]}
+          onHistorySelect={setSearchValue}
+          onChatSelect={() => {}}
         />
         <div className="flex min-h-0 flex-1 flex-col">
           <ChatCanvas
