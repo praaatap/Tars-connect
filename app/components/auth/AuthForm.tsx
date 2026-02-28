@@ -6,13 +6,13 @@ export function AuthForm() {
     return (
         <div className="space-y-6 w-full max-w-sm mx-auto">
             <div className="text-center space-y-2">
-                <h2 className="text-3xl font-extrabold text-zinc-900 tracking-tight">Welcome back</h2>
-                <p className="text-zinc-500 text-sm">Experience the next generation of messaging.</p>
+                <h2 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">Welcome back</h2>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm">Experience the next generation of messaging.</p>
             </div>
 
             <div className="space-y-4">
                 <SignInButton mode="modal">
-                    <button className="group relative flex w-full items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm active:scale-[0.98] cursor-pointer">
+                    <button className="group relative flex w-full items-center justify-center gap-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-3.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-sm active:scale-[0.98] cursor-pointer">
                         <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
                             <path
                                 fill="#4285F4"
@@ -38,30 +38,30 @@ export function AuthForm() {
 
             <div className="relative">
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div className="w-full border-t border-zinc-200"></div>
+                    <div className="w-full border-t border-zinc-200 dark:border-zinc-700"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-zinc-500 font-medium">Or continue with</span>
+                    <span className="bg-white dark:bg-zinc-950 px-2 text-zinc-500 dark:text-zinc-400 font-medium">Or continue with</span>
                 </div>
             </div>
 
             <div className="space-y-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Email Address</label>
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider ml-1">Email Address</label>
                     <input
                         type="email"
                         placeholder="name@company.com"
-                        className="w-full text-black border border-zinc-200 rounded-2xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full text-black dark:text-zinc-50 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:focus:border-indigo-500 outline-none transition-all bg-white dark:bg-zinc-800 placeholder-zinc-400 dark:placeholder-zinc-500"
                     />
                 </div>
                 <SignInButton mode="modal">
-                    <button className="w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 cursor-pointer hover:bg-indigo-700 hover:shadow-indigo-300 transition-all active:scale-[0.98]">
+                    <button className="w-full rounded-2xl bg-indigo-600 dark:bg-indigo-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 cursor-pointer hover:bg-indigo-700 dark:hover:bg-indigo-700 hover:shadow-indigo-300 dark:hover:shadow-indigo-900/50 transition-all active:scale-[0.98]">
                         Sign in with Magic Link
                     </button>
                 </SignInButton>
             </div>
 
-            <p className="text-center text-[11px] text-zinc-400 px-6">
+            <p className="text-center text-[11px] text-zinc-400 dark:text-zinc-500 px-6">
                 By continuing, you agree to our <a href="#" className="underline">Terms</a> and <a href="#" className="underline">Privacy Policy</a>.
             </p>
         </div>

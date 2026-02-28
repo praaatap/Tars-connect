@@ -475,20 +475,12 @@ export const getSuggestedUsers = query({
   args: {},
   handler: async (ctx) => {
     const currentUser = await getCurrentUser(ctx);
-    if (!currentUser) {
-      console.log("No current user found");
-      return [];
-    }
+    if (!currentUser) return [];
 
     const currentUserIdStr = currentUser._id.toString();
-    console.log("Current user ID:", currentUserIdStr);
 
-    // Get all conversations for current user to check if already chatting
-    const conversations = await ctx.db
-      .query("conversations")
-      .collect();
-
-    const userConversations = conversations.filter((c: any) =>
+    // Get all conversations for current user
+    const userConversations = (await ctx.db.query("conversations").collect()).filter((c: any) =>
       c.participants.some((p: any) => p.toString() === currentUserIdStr)
     );
 
@@ -498,25 +490,35 @@ export const getSuggestedUsers = query({
       )
     );
 
-    const allUsers = await ctx.db.query("users").collect();
-    console.log("Total users in DB:", allUsers.length);
+    // Get pending invites sent by current user
+    const pendingInvites = await ctx.db
+      .query("chatInvites")
+      .withIndex("by_from_user_status", (q: any) =>
+        q.eq("fromUserId", currentUser._id).eq("status", "pending")
+      )
+      .collect();
 
-    // Show all users except current user, mark if already in conversation
-    const suggestedUsers = allUsers
+    const sentInviteUserIds = new Set(
+      pendingInvites.map((inv: any) => inv.toUserId.toString())
+    );
+
+    const allUsers = await ctx.db.query("users").collect();
+
+    // Show all users except current user, mark if already in conversation or has pending invite
+    return allUsers
       .filter((u: any) => u._id.toString() !== currentUserIdStr)
       .slice(0, 10)
       .map((u: any) => {
         const userIdStr = u._id.toString();
         const isInConversation = existingParticipantIds.has(userIdStr);
+        const hasPendingInvite = sentInviteUserIds.has(userIdStr);
+
         return {
           ...u,
           isInConversation,
-          hasPendingInvite: false,
+          hasPendingInvite,
         };
       });
-
-    console.log("Final suggested users:", suggestedUsers.length);
-    return suggestedUsers;
   },
 });
 

@@ -43,13 +43,13 @@ export function GroupMembersModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh]">
-        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-          <h2 className="font-bold text-zinc-900">Group Details: {groupName}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-sm bg-white dark:bg-zinc-850 rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh]">
+        <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-700 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+          <h2 className="font-bold text-zinc-900 dark:text-zinc-50">Group Details: {groupName}</h2>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-600 p-1"
+            className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-400 p-1"
           >
             ✕
           </button>
@@ -57,23 +57,23 @@ export function GroupMembersModal({
 
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label className="text-[11px] font-bold text-zinc-400 tracking-wider block mb-1.5 uppercase">
+            <label className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-wider block mb-1.5 uppercase">
               Current Members ({currentMembers.length})
             </label>
             <div className="space-y-2 max-h-24 overflow-y-auto pr-1">
               {currentMembers.map(member => (
                 <div
                   key={member._id}
-                  className="flex items-center gap-3 p-2 rounded-xl bg-zinc-50 border border-zinc-200"
+                  className="flex items-center gap-3 p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"
                 >
-                  <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 shrink-0">
+                  <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-xs font-bold text-indigo-700 dark:text-indigo-200 shrink-0">
                     {member.name?.[0] || 'U'}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-zinc-700">{member.name || "User"}</p>
-                    <p className="text-xs text-zinc-500">{member.email}</p>
+                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">{member.name || "User"}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{member.email}</p>
                   </div>
-                  <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </div>
@@ -82,11 +82,11 @@ export function GroupMembersModal({
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-zinc-400 tracking-wider block mb-1.5 uppercase">
+            <label className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-wider block mb-1.5 uppercase">
               Invite More People
             </label>
             {availableUsers.length === 0 ? (
-              <div className="text-center py-4 text-xs text-zinc-400 border border-zinc-200 rounded-xl">
+              <div className="text-center py-4 text-xs text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                 No more users to invite
               </div>
             ) : (
@@ -95,10 +95,11 @@ export function GroupMembersModal({
                   <label
                     key={user._id}
                     className={`flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer ${selectedUsers.includes(user._id)
-                      ? 'border-indigo-600 bg-indigo-50 shadow-sm'
-                      : 'border-zinc-100 hover:border-zinc-200 bg-white'
+                      ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm'
+                      : 'border-zinc-100 dark:border-zinc-700 hover:border-zinc-200 dark:hover:border-zinc-600 bg-white dark:bg-zinc-800'
                       }`}
                   >
+                  
                     <input
                       type="checkbox"
                       className="hidden"
@@ -111,15 +112,15 @@ export function GroupMembersModal({
                         }
                       }}
                     />
-                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 shrink-0">
+                    <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-xs font-bold text-indigo-700 dark:text-indigo-200 shrink-0">
                       {user.name?.[0] || 'U'}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-700">{user.name || "User"}</p>
-                      <p className="text-xs text-zinc-500">{user.email}</p>
+                      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">{user.name || "User"}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">{user.email}</p>
                     </div>
                     {selectedUsers.includes(user._id) && (
-                      <div className="h-4 w-4 bg-indigo-600 rounded-full flex items-center justify-center shrink-0">
+                      <div className="h-4 w-4 bg-indigo-600 dark:bg-indigo-500 rounded-full flex items-center justify-center shrink-0">
                         <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
@@ -131,11 +132,11 @@ export function GroupMembersModal({
             )}
           </div>
           <div>
-            <label className="text-[11px] font-bold text-zinc-400 tracking-wider block mb-1.5 uppercase">
+            <label className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-wider block mb-1.5 uppercase">
               Add a Personal Note (Optional)
             </label>
             <textarea
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-colors resize-none h-24 text-black"
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 dark:focus:border-indigo-500 outline-none transition-colors resize-none h-24 text-black dark:text-zinc-50 bg-white dark:bg-zinc-800 placeholder-zinc-400 dark:placeholder-zinc-500"
               placeholder="Tell them why they should join... (e.g. 'Hey, joining our tech discussion group!')"
               value={inviteMessage}
               onChange={(e) => setInviteMessage(e.target.value)}
@@ -143,11 +144,11 @@ export function GroupMembersModal({
           </div>
         </div>
 
-        <div className="p-4 bg-zinc-50 border-t border-zinc-100">
+        <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border-t border-zinc-100 dark:border-zinc-700">
           <button
             onClick={handleInvite}
             disabled={selectedUsers.length === 0 || isLoading}
-            className="w-full bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98]"
+            className="w-full bg-indigo-600 dark:bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-bold shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 hover:bg-indigo-700 dark:hover:bg-indigo-700 disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98]"
           >
             {isLoading ? "Sending invites..." : `Send Invites (${selectedUsers.length})`}
           </button>
