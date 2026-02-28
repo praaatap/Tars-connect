@@ -14,21 +14,44 @@ import { ChatRightSidebar } from "../components/chat/ChatRightSidebar";
 
 export default function ChatPage() {
   return (
-    <Authenticated>
-      <ChatContent />
-    </Authenticated>
+    <>
+      <Authenticated>
+        <ChatContent />
+      </Authenticated>
+      <AuthLoading>
+        <ChatSkeleton />
+      </AuthLoading>
+    </>
+  );
+}
+
+function ChatSkeleton() {
+  return (
+    <main className="flex h-screen flex-col bg-zinc-50">
+      <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3 shrink-0">
+        <div className="h-6 w-32 bg-zinc-100 rounded animate-pulse" />
+        <div className="h-8 w-8 bg-zinc-100 rounded-full animate-pulse" />
+      </div>
+      <div className="flex flex-1 min-h-0">
+        <div className="hidden lg:flex w-[320px] flex-col border-r border-zinc-200 bg-white p-4 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="flex gap-3">
+              <div className="h-10 w-10 bg-zinc-100 rounded-full animate-pulse" />
+              <div className="flex-1 space-y-2 py-1">
+                <div className="h-4 bg-zinc-100 rounded animate-pulse w-3/4" />
+                <div className="h-3 bg-zinc-50 rounded animate-pulse w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 bg-[#efeae2]/50" />
+      </div>
+    </main>
   );
 }
 
 function LoadingScreen() {
-  return (
-    <main className="flex h-screen flex-col items-center justify-center bg-zinc-100">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-zinc-200 border-t-indigo-600"></div>
-        <p className="text-zinc-600">Loading your chats...</p>
-      </div>
-    </main>
-  );
+  return <ChatSkeleton />;
 }
 
 function ChatContent() {
@@ -106,12 +129,25 @@ function ChatContent() {
     setSearchValue(""); // Clear search
   };
 
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const handleSendMessage = async (messageBody: string) => {
-    if (!selectedConversationId || !messageBody.trim()) return;
-    await sendMessage({
-      conversationId: selectedConversationId as any,
-      body: messageBody,
-    });
+    if (!selectedConversationId || !messageBody.trim() || isSending) return;
+
+    setIsSending(true);
+    setError(null);
+    try {
+      await sendMessage({
+        conversationId: selectedConversationId as any,
+        body: messageBody,
+      });
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setError("Failed to send message. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   // Convert search results to sidebar format
@@ -192,6 +228,8 @@ function ChatContent() {
               onBack={() => setSelectedConversationId(null)}
               selectedConversation={conversations?.find((c: any) => c._id === selectedConversationId)}
               currentUserId={currentUser?._id}
+              isSending={isSending}
+              error={error}
             />
           ) : (
             <div className="hidden lg:flex flex-1 flex-col">
@@ -221,12 +259,16 @@ function ChatWindow({
   onBack,
   selectedConversation,
   currentUserId,
+  isSending,
+  error,
 }: {
   messages: any[];
   onSendMessage: (message: string) => void;
   onBack: () => void;
   selectedConversation?: any;
   currentUserId?: string;
+  isSending?: boolean;
+  error?: string | null;
 }) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -244,12 +286,14 @@ function ChatWindow({
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
-    await onSendMessage(input);
+    if (!input.trim() || isSending) return;
+    const currentInput = input;
     setInput("");
     if (selectedConversation?._id) {
       clearTyping({ conversationId: selectedConversation._id });
     }
+    await onSendMessage(currentInput);
+
     // Force scroll to bottom after sending
     setTimeout(() => {
       if (scrollRef.current) {
@@ -321,6 +365,14 @@ function ChatWindow({
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto bg-[#efeae2] p-4 lg:p-6 space-y-2 relative"
       >
+        {/* Error Notification */}
+        {error && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-xs shadow-md z-30 flex items-center gap-2 max-w-[90%] w-max">
+            <span>{error}</span>
+            <button onClick={() => { }} className="font-bold underline">Retry</button>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
             <div className="h-16 w-16 bg-white/50 backdrop-blur rounded-full flex items-center justify-center text-2xl shadow-sm">
@@ -353,8 +405,8 @@ function ChatWindow({
                   <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[85%] lg:max-w-[70%]`}>
                     <div
                       className={`rounded-2xl px-3 py-1.5 shadow-sm relative transition-all ${isMine
-                        ? 'bg-indigo-600 text-white rounded-tr-none'
-                        : 'bg-white text-zinc-800 rounded-tl-none'
+                          ? 'bg-indigo-600 text-white rounded-tr-none'
+                          : 'bg-white text-zinc-800 rounded-tl-none'
                         }`}
                     >
                       {!isMine && msg.sender.name && (
@@ -458,12 +510,19 @@ function ChatWindow({
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isSending}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm disabled:opacity-50 disabled:bg-zinc-300 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
+            {isSending ? (
+              <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
