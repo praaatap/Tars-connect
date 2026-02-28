@@ -43,6 +43,9 @@ function ChatContent() {
     initializeUser();
   }, [initializeUser]);
 
+  // Fetch current user from Convex
+  const currentUser = useQuery((api as any).users.getCurrentUser, {});
+
   // Fetch real conversations from Convex
   const conversations = useQuery((api as any).messages.getConversations, {});
   const searchHistory = useQuery(api.searchHistory.getForCurrentUser, {});
@@ -119,6 +122,7 @@ function ChatContent() {
     conversationId: u._id, // Using userId as ID for mapping
     isUser: true,
     isOnline: u.lastSeenAt ? (Date.now() - u.lastSeenAt) < 60000 : false,
+    imageUrl: u.imageUrl,
   }));
 
   // Convert conversations to sidebar format
@@ -135,6 +139,7 @@ function ChatContent() {
       isUser: false,
       isOnline,
       unreadCount: conv.unreadCount || 0,
+      imageUrl: conv.imageUrl,
     };
   });
 
@@ -142,7 +147,7 @@ function ChatContent() {
 
   return (
     <main className="flex h-screen flex-col bg-zinc-100">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-3 shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-zinc-900">Tars Chat</h1>
           <Link href="/group-chat" className="text-sm text-indigo-600 hover:text-indigo-500">
@@ -156,8 +161,9 @@ function ChatContent() {
         {/* Sidebar - hidden on mobile when a chat is selected */}
         <div className={`w-full lg:w-[320px] lg:flex shrink-0 ${selectedConversationId ? 'hidden' : 'flex'}`}>
           <ChatSidebar
-            userName={user?.firstName || "User"}
+            userName={currentUser?.name || user?.firstName || "User"}
             userStatus="Online"
+            imageUrl={currentUser?.imageUrl}
             sectionTitle={searchValue.trim() !== "" ? "SEARCH RESULTS" : "MESSAGES"}
             searchPlaceholder="Search people..."
             chats={displayItems as any}
@@ -185,6 +191,7 @@ function ChatContent() {
               onSendMessage={handleSendMessage}
               onBack={() => setSelectedConversationId(null)}
               selectedConversation={conversations?.find((c: any) => c._id === selectedConversationId)}
+              currentUserId={currentUser?._id}
             />
           ) : (
             <div className="hidden lg:flex flex-1 flex-col">
@@ -213,11 +220,13 @@ function ChatWindow({
   onSendMessage,
   onBack,
   selectedConversation,
+  currentUserId,
 }: {
   messages: any[];
   onSendMessage: (message: string) => void;
   onBack: () => void;
   selectedConversation?: any;
+  currentUserId?: string;
 }) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -275,32 +284,44 @@ function ChatWindow({
 
   return (
     <>
-      {/* Mobile-only header with back button */}
-      <div className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 lg:hidden shrink-0">
-        <button
-          onClick={onBack}
-          className="p-1 -ml-1 text-zinc-600 hover:text-zinc-900"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
-            {selectedConversation?.name?.[0] || 'C'}
+      {/* Header section */}
+      <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-1 -ml-1 text-zinc-600 hover:text-zinc-900 lg:hidden"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div className="relative">
+            {selectedConversation?.imageUrl ? (
+              <img src={selectedConversation.imageUrl} alt={selectedConversation.name} className="h-10 w-10 rounded-full object-cover" />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+                {selectedConversation?.name?.[0] || 'C'}
+              </div>
+            )}
+            {selectedConversation?.isOnline && (
+              <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+            )}
           </div>
-          <span className="font-medium text-zinc-900">{selectedConversation?.name}</span>
+          <div>
+            <span className="font-semibold text-zinc-900 block leading-tight">{selectedConversation?.name}</span>
+            <span className="text-xs text-zinc-500">{selectedConversation?.isOnline ? 'Online' : 'Offline'}</span>
+          </div>
         </div>
       </div>
 
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white p-6 space-y-4 relative"
+        className="flex-1 overflow-y-auto bg-[#efeae2] p-4 lg:p-6 space-y-2 relative"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
-            <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">
+            <div className="h-16 w-16 bg-white/50 backdrop-blur rounded-full flex items-center justify-center text-2xl shadow-sm">
               👋
             </div>
             <div className="max-w-xs">
@@ -310,24 +331,47 @@ function ChatWindow({
           </div>
         ) : (
           <>
-            {messages.map((msg: any) => (
-              <div key={msg._id} className="flex gap-3">
-                <div className="h-8 w-8 rounded-full bg-indigo-200 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-zinc-900">{msg.sender.name}</p>
-                  <p className="text-sm text-zinc-700 mt-1">{msg.body}</p>
-                  <p className="text-xs text-zinc-400 mt-1">{formatMessageTimestamp(msg.createdAt)}</p>
+            {messages.map((msg: any) => {
+              const isMine = msg.sender._id === currentUserId;
+              return (
+                <div
+                  key={msg._id}
+                  className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1`}
+                >
+                  {!isMine && (
+                    <div className="mr-2 mt-auto shrink-0">
+                      {msg.sender.imageUrl ? (
+                        <img src={msg.sender.imageUrl} alt={msg.sender.name} className="h-7 w-7 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-7 w-7 rounded-full bg-indigo-200" />
+                      )}
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[85%] lg:max-w-[70%] rounded-2xl px-3 py-1.5 shadow-sm relative ${isMine
+                        ? 'bg-indigo-600 text-white rounded-tr-none'
+                        : 'bg-white text-zinc-800 rounded-tl-none'
+                      }`}
+                  >
+                    {!isMine && (
+                      <p className="text-[11px] font-bold text-indigo-600 mb-0.5">{msg.sender.name}</p>
+                    )}
+                    <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
+                    <div className={`text-[10px] mt-1 flex justify-end ${isMine ? 'text-white/70' : 'text-zinc-400'}`}>
+                      {formatMessageTimestamp(msg.createdAt)}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {selectedConversation?.isTyping && (
-              <div className="flex gap-2 items-center text-zinc-400 text-xs animate-pulse">
+              <div className="flex gap-2 items-center text-zinc-500 text-[11px] animate-pulse ml-9">
                 <div className="flex gap-1">
-                  <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full"></span>
-                  <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full"></span>
-                  <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full"></span>
+                  <span className="h-1 w-1 bg-zinc-400 rounded-full"></span>
+                  <span className="h-1 w-1 bg-zinc-400 rounded-full"></span>
+                  <span className="h-1 w-1 bg-zinc-400 rounded-full"></span>
                 </div>
-                <span>{selectedConversation.name} is typing...</span>
+                <span>typing...</span>
               </div>
             )}
           </>
@@ -336,16 +380,16 @@ function ChatWindow({
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-medium text-white shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-medium text-white shadow-lg transition-all hover:bg-indigo-700 active:scale-95 flex items-center gap-2 z-10"
           >
             ↓ New messages
           </button>
         )}
       </div>
-      <div className="border-t border-zinc-200 bg-white px-5 py-4 shrink-0">
-        <div className="flex items-center gap-3 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+      <div className="border-t border-zinc-200 bg-white px-4 py-3 shrink-0">
+        <div className="flex items-center gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2">
           <input
-            className="flex-1 bg-transparent text-sm text-zinc-700 outline-none"
+            className="flex-1 bg-transparent text-[14px] text-zinc-700 outline-none"
             placeholder="Type a message..."
             value={input}
             onChange={(e) => {
@@ -361,9 +405,12 @@ function ChatWindow({
           />
           <button
             onClick={handleSend}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white"
+            disabled={!input.trim()}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm disabled:opacity-50 disabled:bg-zinc-300 transition-colors"
           >
-            ➤
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
       </div>

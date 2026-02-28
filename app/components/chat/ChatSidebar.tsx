@@ -6,6 +6,7 @@ type ChatItem = {
   unreadCount?: number;
   conversationId?: string;
   isOnline?: boolean;
+  imageUrl?: string;
 };
 
 type SearchHistoryItem = {
@@ -17,6 +18,7 @@ type SearchHistoryItem = {
 type ChatSidebarProps = {
   userName: string;
   userStatus: string;
+  imageUrl?: string;
   sectionTitle: string;
   searchPlaceholder: string;
   chats: ChatItem[];
@@ -31,6 +33,7 @@ type ChatSidebarProps = {
 export function ChatSidebar({
   userName,
   userStatus,
+  imageUrl,
   sectionTitle,
   searchPlaceholder,
   chats,
@@ -45,13 +48,17 @@ export function ChatSidebar({
     <aside className="flex h-full w-full max-w-[320px] flex-col border-r border-zinc-200 bg-white">
       <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-200 text-sm font-bold text-indigo-800">
-            {userName
-              .split(" ")
-              .map((name) => name[0])
-              .join("")
-              .slice(0, 2)}
-          </div>
+          {imageUrl ? (
+            <img src={imageUrl} alt={userName} className="h-10 w-10 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-200 text-sm font-bold text-indigo-800">
+              {userName
+                .split(" ")
+                .map((name) => name[0])
+                .join("")
+                .slice(0, 2)}
+            </div>
+          )}
           <div>
             <p className="text-sm font-semibold text-zinc-900">{userName}</p>
             <p className="text-xs text-emerald-500">{userStatus}</p>
@@ -113,8 +120,12 @@ export function ChatSidebar({
                 }`}
             >
               <div className="flex items-start gap-2 flex-1">
-                <div className="relative mt-1">
-                  <div className="h-8 w-8 rounded-full bg-zinc-200" />
+                <div className="relative mt-1 shrink-0">
+                  {chat.imageUrl ? (
+                    <img src={chat.imageUrl} alt={chat.name} className="h-8 w-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-zinc-200" />
+                  )}
                   {chat.isOnline && (
                     <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
                   )}
