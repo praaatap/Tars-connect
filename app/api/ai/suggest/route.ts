@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
 Conversation History:
 {context}
-
+you are a user named {userName} in the conversation above. Based on the conversation history, generate 3 short and relevant reply suggestions that {userName} can use to continue the conversation. Each suggestion should be concise (max 40 words) and contextually appropriate. Avoid generic responses and try to capture the tone of the conversation.
 SYSTEM : Generate 3 short reply suggestions (max 40 words each).
 Format: suggestion1 | suggestion2 | suggestion3
 IMPORTANT: Only output the suggestions separated by |. Nothing else.`

@@ -1,11 +1,11 @@
 import {create} from 'zustand';
 
-interface ToneState{
+interface ToneState {
     tone:string;
-    setTone:(tone:string) => void;
+    setTone: (tone:string) => void;
 }
 
 export const useTone = create<ToneState>((set) => ({
-    tone:"Casual",
-    setTone:(tone:string) => set({tone}),
+    tone: '',
+    setTone: (tone:string) => set({tone}),
 }));
