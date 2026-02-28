@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 Conversation History:
 {context}
 
-TASK: Generate 3 short reply suggestions (max 10 words each).
+SYSTEM : Generate 3 short reply suggestions (max 40 words each).
 Format: suggestion1 | suggestion2 | suggestion3
 
 IMPORTANT: Only output the suggestions separated by |. Nothing else.`
