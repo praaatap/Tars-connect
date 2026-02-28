@@ -52,7 +52,7 @@ export default defineSchema({
     invitedUserId: v.id("users"),
     invitedByUserId: v.id("users"),
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("rejected")),
-    message: v.optional(v.string()), // Added for custom invite messages
+    message: v.optional(v.string()), // invite messages
     createdAt: v.number(),
     respondedAt: v.optional(v.number()),
   })

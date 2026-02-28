@@ -12,7 +12,7 @@ export function AuthForm() {
 
             <div className="space-y-4">
                 <SignInButton mode="modal">
-                    <button className="group relative flex w-full items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm active:scale-[0.98]">
+                    <button className="group relative flex w-full items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm active:scale-[0.98] cursor-pointer">
                         <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
                             <path
                                 fill="#4285F4"
@@ -55,7 +55,7 @@ export function AuthForm() {
                     />
                 </div>
                 <SignInButton mode="modal">
-                    <button className="w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300 transition-all active:scale-[0.98]">
+                    <button className="w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 cursor-pointer hover:bg-indigo-700 hover:shadow-indigo-300 transition-all active:scale-[0.98]">
                         Sign in with Magic Link
                     </button>
                 </SignInButton>

@@ -4,10 +4,9 @@ import { NextResponse } from "next/server";
 import process from "process";
 
 export const dynamic = 'force-dynamic';
-
 export async function POST(req: Request) {
     try {
-        const { context, userName  } = await req.json();
+        const { context, userName, tone } = await req.json();
 
         if (!context || context.trim() === "") {
             console.log("Empty context provided to AI suggestion API");
@@ -28,11 +27,12 @@ export async function POST(req: Request) {
 
         const promptTemplate = PromptTemplate.fromTemplate(
             `You are an AI assistant helping a user write helpful replies in a chat.
+            The user wants their replies to have a {tone} tone.
 
 Conversation History:
 {context}
 
-SYSTEM : Generate 3 short reply suggestions (max 40 words each).
+SYSTEM : Generate 3 short reply suggestions (max 40 words each) in a {tone} tone.
 Format: suggestion1 | suggestion2 | suggestion3
 IMPORTANT: Only output the suggestions separated by |. Nothing else.`
         );
@@ -41,7 +41,7 @@ IMPORTANT: Only output the suggestions separated by |. Nothing else.`
         const result = await chain.invoke({
             context: context.substring(0, 2000), // Limit context to avoid token issues
             userName,
-            
+            tone: tone || "Friendly",
         });
 
         const responseText = result.content.toString().trim();

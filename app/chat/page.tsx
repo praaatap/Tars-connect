@@ -520,6 +520,7 @@ function ChatWindow({
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [selectedTone, setSelectedTone] = useState("Friendly");
 
   const setTyping = useMutation((api as any).messages.setTyping);
   const clearTyping = useMutation((api as any).messages.clearTyping);
@@ -593,7 +594,8 @@ function ChatWindow({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           context,
-          userName: "the user"
+          userName: "the user",
+          tone: selectedTone
         })
       });
 
@@ -785,8 +787,8 @@ function ChatWindow({
                         </div>
                       )}
 
-                      <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-all ${msg.deleted ? 'italic text-opacity-70' : ''}`}>
-                        {msg.body}
+                      <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-all ${msg.deleted ? 'italic opacity-60' : ''}`}>
+                        {msg.deleted ? "This message was deleted" : msg.body}
                       </p>
 
                       <div className={`text-[10px] mt-1 flex justify-end gap-2 items-center ${isMine ? 'text-white/70' : 'text-zinc-400'}`}>
@@ -901,7 +903,16 @@ function ChatWindow({
           >
             <span className="text-lg group-hover:scale-110 transition-transform">✨</span>
           </button>
-
+          <select
+            className="bg-white/50 border border-zinc-200 rounded-lg px-2 py-1 text-[10px] font-bold text-zinc-500 outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+            value={selectedTone}
+            onChange={(e) => setSelectedTone(e.target.value)}
+          >
+            <option value="Friendly">Friendly</option>
+            <option value="Professional">Professional</option>
+            <option value="Funny">Funny</option>
+            <option value="Sarcastic">Sarcastic</option>
+          </select>
           <input
             className="flex-1 bg-transparent text-[14px] text-zinc-700 outline-none"
             placeholder="Type a message..."

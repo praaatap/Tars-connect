@@ -35,6 +35,7 @@ export function AISuggestionsModal({
                     </button>
                 </div>
 
+
                 <div className="p-6">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-10 space-y-4">
