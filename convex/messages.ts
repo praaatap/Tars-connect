@@ -399,7 +399,7 @@ export const sendGroupInvite = mutation({
     }
 
     const now = Date.now();
-    const inviteIds = [];
+    const inviteIds: any[] = [];
 
     for (const userId of args.invitedUserIds) {
       // Check if already a member
@@ -411,7 +411,7 @@ export const sendGroupInvite = mutation({
       const existingInvites = await ctx.db
         .query("groupChatInvites")
         .collect();
-      
+
       const existingInvite = existingInvites.find((invite: any) =>
         invite.conversationId === args.conversationId &&
         invite.invitedUserId === userId &&
@@ -450,8 +450,8 @@ export const getPendingInvites = query({
 
     return Promise.all(
       invites.map(async (invite: any) => {
-        const conversation = await ctx.db.get(invite.conversationId);
-        const invitedBy = await ctx.db.get(invite.invitedByUserId);
+        const conversation: any = await ctx.db.get(invite.conversationId);
+        const invitedBy: any = await ctx.db.get(invite.invitedByUserId);
 
         return {
           _id: invite._id,
@@ -542,7 +542,7 @@ export const getGroupMembers = query({
 
     return Promise.all(
       conversation.participants.map(async (userId: any) => {
-        const user = await ctx.db.get(userId);
+        const user: any = await ctx.db.get(userId);
         return {
           _id: user?._id,
           name: user?.name || "User",

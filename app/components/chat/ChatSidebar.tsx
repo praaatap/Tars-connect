@@ -31,6 +31,8 @@ type ChatSidebarProps = {
   onHistorySelect: (value: string) => void;
   onChatSelect: (conversationId: string) => void;
   onCreateGroup?: () => void;
+  suggestedUsers?: any[];
+  onUserSelect?: (userId: string) => void;
 };
 
 export function ChatSidebar({
@@ -47,6 +49,8 @@ export function ChatSidebar({
   onHistorySelect,
   onChatSelect,
   onCreateGroup,
+  suggestedUsers,
+  onUserSelect,
 }: ChatSidebarProps) {
   return (
     <aside className="flex h-full w-full max-w-[320px] flex-col border-r border-zinc-200 bg-white">
@@ -123,9 +127,11 @@ export function ChatSidebar({
 
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-4">
         {chats.length === 0 ? (
-          <p className="px-2 py-8 text-center text-sm text-zinc-400">
-            {searchValue.trim() !== "" ? "No people found" : "No conversations yet"}
-          </p>
+          <div className="flex flex-col flex-1">
+            <p className="px-2 py-8 text-center text-sm text-zinc-400">
+              {searchValue.trim() !== "" ? "No people found" : "No conversations yet"}
+            </p>
+          </div>
         ) : (
           chats.map((chat) => (
             <button
@@ -172,6 +178,46 @@ export function ChatSidebar({
               </div>
             </button>
           ))
+        )}
+
+        {/* Suggested Users - Mobile only */}
+        {suggestedUsers && suggestedUsers.length > 0 && !searchValue.trim() && (
+          <div className="mt-8 xl:hidden">
+            <p className="px-2 pb-3 text-[11px] font-semibold tracking-[0.18em] text-zinc-400 uppercase">
+              Suggested for you
+            </p>
+            <div className="flex flex-col gap-1">
+              {suggestedUsers.map((user) => (
+                <button
+                  key={user._id}
+                  onClick={() => onUserSelect?.(user._id)}
+                  className="flex items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-zinc-50"
+                >
+                  <div className="relative shrink-0">
+                    {user.imageUrl ? (
+                      <img src={user.imageUrl} alt={user.name || "User"} className="h-8 w-8 rounded-full bg-zinc-200 object-cover border-2 border-white shadow-sm" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                        {(user.name || "User")[0].toUpperCase()}
+                      </div>
+                    )}
+                    {user.lastSeenAt && (Date.now() - user.lastSeenAt < 60000) && (
+                      <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-900 truncate">{user.name || "Anonymous User"}</p>
+                    <p className="text-[10px] text-zinc-400 truncate">New to Tars Connect</p>
+                  </div>
+                  <div className="text-indigo-600">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </aside>

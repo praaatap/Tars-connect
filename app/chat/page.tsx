@@ -137,6 +137,7 @@ function ChatContent() {
 
   // Get pending group invites
   const pendingInvites = useQuery((api as any).messages.getPendingInvites, {});
+  const suggestedUsers = useQuery((api as any).messages.getSuggestedUsers, {});
   const acceptGroupInvite = useMutation((api as any).messages.acceptGroupInvite);
   const rejectGroupInvite = useMutation((api as any).messages.rejectGroupInvite);
   const sendGroupInvite = useMutation((api as any).messages.sendGroupInvite);
@@ -289,6 +290,8 @@ function ChatContent() {
               }
             }}
             onCreateGroup={() => setIsGroupModalOpen(true)}
+            suggestedUsers={suggestedUsers}
+            onUserSelect={handleSelectUser}
           />
         </div>
 
@@ -532,14 +535,14 @@ function ChatWindow({
           <div>
             <span className="font-semibold text-zinc-900 block leading-tight">{selectedConversation?.name}</span>
             <span className="text-xs text-zinc-500">
-              {isGroupChat 
+              {isGroupChat
                 ? `${groupMembers?.length || 0} members`
                 : selectedConversation?.isOnline ? 'Online' : 'Offline'
               }
             </span>
           </div>
         </div>
-        
+
         {isGroupChat && onAddMembers && (
           <button
             onClick={onAddMembers}
